@@ -1,0 +1,55 @@
+/**
+ * MISAQ GADGET — Order intake backend
+ *
+ * SETUP:
+ * 1. Go to sheets.google.com, create a new blank spreadsheet.
+ *    Rename it: "MISAQ Gadget Orders"
+ * 2. In the sheet, go to Extensions > Apps Script.
+ * 3. Delete anything in the editor and paste this whole file.
+ * 4. Click the disk/Save icon.
+ * 5. Click "Deploy" > "New deployment".
+ *    - Click the gear icon next to "Select type" > choose "Web app".
+ *    - Description: "Order intake"
+ *    - Execute as: "Me"
+ *    - Who has access: "Anyone"
+ *    - Click "Deploy". Authorize when Google asks (it's your own script).
+ * 6. Copy the "Web app URL" it gives you — that's your ORDER_ENDPOINT.
+ *    Paste it into js/order.js in the website code.
+ *
+ * Every order submitted from the website will appear as a new row
+ * in a sheet tab called "Orders" (created automatically on first order).
+ */
+
+function doPost(e) {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = ss.getSheetByName("Orders");
+
+  if (!sheet) {
+    sheet = ss.insertSheet("Orders");
+    sheet.appendRow([
+      "সময়", "পণ্য", "নাম", "মোবাইল", "ঠিকানা", "এলাকা",
+      "কালার", "পরিমাণ", "একক মূল্য", "ডেলিভারি চার্জ", "সর্বমোট"
+    ]);
+    sheet.setFrozenRows(1);
+  }
+
+  var data = JSON.parse(e.postData.contents);
+
+  sheet.appendRow([
+    new Date(),
+    data.product || "",
+    data.name || "",
+    data.phone || "",
+    data.address || "",
+    data.district || "",
+    data.color || "",
+    data.quantity || "",
+    data.unitPrice || "",
+    data.deliveryCharge || "",
+    data.total || "",
+  ]);
+
+  return ContentService
+    .createTextOutput(JSON.stringify({ result: "success" }))
+    .setMimeType(ContentService.MimeType.JSON);
+}
