@@ -179,22 +179,19 @@
         <div class="field">
           <label for="phone">মোবাইল নম্বর</label>
           <input type="tel" id="phone" name="phone" placeholder="01XXXXXXXXX" required />
+          <p class="price-note" style="margin-top:6px;">আপনার মোবাইল নম্বরটি সঠিকভাবে লিখুন</p>
         </div>
         <div class="field">
-          <label for="address">ঠিকানা (বাসা/রোড/এলাকা)</label>
-          <input type="text" id="address" name="address" placeholder="বাসা নং, রোড নং, এলাকার নাম" required />
+          <label for="address">ঠিকানা</label>
+          <input type="text" id="address" name="address" placeholder="বাসা নং/গ্রাম/এলাকা/থানা/জেলা সঠিকভাবে লিখুন" required />
         </div>
         <div class="field">
-          <label for="zela">জেলা</label>
-          <select id="zela" name="zela" required>
-            <option value="">জেলা বেছে নিন</option>
-          </select>
-        </div>
-        <div class="field">
-          <label for="thana">থানা</label>
-          <select id="thana" name="thana" required disabled>
-            <option value="">আগে জেলা বেছে নিন</option>
-          </select>
+          <label>ডেলিভারি ফি বেছে নিন</label>
+          <div class="color-select">
+            <div class="color-option is-selected" data-charge="70">ঢাকার ভিতরে (৳70)</div>
+            <div class="color-option" data-charge="120">ঢাকার বাইরে (৳120)</div>
+          </div>
+          <input type="hidden" id="deliveryZone" name="deliveryZone" value="70" />
         </div>
         <div class="field">
           <label>কালার বেছে নিন</label>
@@ -247,7 +244,7 @@
 
 <footer class="site-footer">
   <img src="../images/logo.png" alt="MISAQ Gadget" />
-  <p>একটি উদ্যোগ <strong>MISAQ HOLDINGS</strong>-এর — <a href="https://www.facebook.com/" target="_blank" rel="noopener">আমাদের ফেসবুক পেজ দেখুন</a></p>
+  <p>একটি <strong>MISAQ HOLDINGS</strong>-এর উদ্যোগ— <a href="https://www.facebook.com/" target="_blank" rel="noopener">আমাদের ফেসবুক পেজ দেখুন</a></p>
 </footer>
 
 <div class="sticky-cta">
@@ -255,7 +252,6 @@
   <a href="#order-form" class="btn-cta">অর্ডার করুন</a>
 </div>
 
-<script src="../js/bd-locations.js"></script>
 <script src="../js/order.js"></script>
 </body>
 </html>
