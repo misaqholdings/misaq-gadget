@@ -76,5 +76,6 @@ Once you create a Pixel in Meta Events Manager, open `q10-earbuds/index.html`, f
 
 ## Notes
 
-- Delivery charges (৳70 Dhaka / ৳130 outside Dhaka) and the product price (৳950) are set directly in `q10-earbuds/index.html` and `js/order.js` — update both if prices change.
+- Delivery charges (৳70 Dhaka / ৳120 outside Dhaka) are set as `DHAKA_CHARGE` / `OUTSIDE_DHAKA_CHARGE` in `js/order.js`. The product price (৳950) is set as `PRODUCT_PRICE` in the same file, and also shown as text in `q10-earbuds/index.html` — update both if prices change.
+- `js/bd-locations.js` contains all 64 districts and 494 upazilas (source: nuhil/bangladesh-geocode, MIT licensed) used to power the Zela → Thana dropdowns. This file is shared across all product pages — no need to duplicate it.
 - The order form validates on the client side only (required fields) — always double-check phone numbers by calling before dispatching, since nothing stops a customer from typing an invalid number.

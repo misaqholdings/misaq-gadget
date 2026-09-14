@@ -181,14 +181,19 @@
           <input type="tel" id="phone" name="phone" placeholder="01XXXXXXXXX" required />
         </div>
         <div class="field">
-          <label for="address">সম্পূর্ণ ঠিকানা</label>
-          <input type="text" id="address" name="address" placeholder="বাসা/রোড/এলাকা/থানা" required />
+          <label for="address">ঠিকানা (বাসা/রোড/এলাকা)</label>
+          <input type="text" id="address" name="address" placeholder="বাসা নং, রোড নং, এলাকার নাম" required />
         </div>
         <div class="field">
-          <label for="district">ঠিকানা</label>
-          <select id="district" name="district" required>
-            <option value="dhaka" data-charge="70">ঢাকার ভিতরে (ডেলিভারি চার্জ ৳70)</option>
-            <option value="outside" data-charge="130">ঢাকার বাইরে (ডেলিভারি চার্জ ৳130)</option>
+          <label for="zela">জেলা</label>
+          <select id="zela" name="zela" required>
+            <option value="">জেলা বেছে নিন</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="thana">থানা</label>
+          <select id="thana" name="thana" required disabled>
+            <option value="">আগে জেলা বেছে নিন</option>
           </select>
         </div>
         <div class="field">
@@ -250,6 +255,7 @@
   <a href="#order-form" class="btn-cta">অর্ডার করুন</a>
 </div>
 
+<script src="../js/bd-locations.js"></script>
 <script src="../js/order.js"></script>
 </body>
 </html>

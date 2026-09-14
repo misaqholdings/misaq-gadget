@@ -27,7 +27,7 @@ function doPost(e) {
   if (!sheet) {
     sheet = ss.insertSheet("Orders");
     sheet.appendRow([
-      "সময়", "পণ্য", "নাম", "মোবাইল", "ঠিকানা", "এলাকা",
+      "সময়", "পণ্য", "নাম", "মোবাইল", "ঠিকানা", "থানা", "জেলা", "এলাকা (ঢাকা/বাইরে)",
       "কালার", "পরিমাণ", "একক মূল্য", "ডেলিভারি চার্জ", "সর্বমোট"
     ]);
     sheet.setFrozenRows(1);
@@ -41,6 +41,8 @@ function doPost(e) {
     data.name || "",
     data.phone || "",
     data.address || "",
+    data.thana || "",
+    data.zela || "",
     data.district || "",
     data.color || "",
     data.quantity || "",

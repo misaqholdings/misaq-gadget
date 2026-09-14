@@ -8,10 +8,13 @@
 const ORDER_ENDPOINT = "";
 
 const PRODUCT_PRICE = 950;
+const DHAKA_CHARGE = 70;
+const OUTSIDE_DHAKA_CHARGE = 120;
 
 const form = document.getElementById("orderForm");
 const qtyInput = document.getElementById("quantity");
-const districtSelect = document.getElementById("district");
+const zelaSelect = document.getElementById("zela");
+const thanaSelect = document.getElementById("thana");
 const colorInput = document.getElementById("color");
 const colorOptions = document.querySelectorAll(".color-option");
 const sumProduct = document.getElementById("sumProduct");
@@ -20,9 +23,54 @@ const sumTotal = document.getElementById("sumTotal");
 const stickyPrice = document.getElementById("stickyPrice");
 const formStatus = document.getElementById("formStatus");
 
+// ---- Populate Zela dropdown ----
+BD_DISTRICTS.forEach((d) => {
+  const opt = document.createElement("option");
+  opt.value = d.id;
+  opt.textContent = d.name;
+  opt.dataset.isDhaka = d.isDhaka ? "1" : "0";
+  zelaSelect.appendChild(opt);
+});
+
+// ---- Populate Thana dropdown when Zela changes ----
+zelaSelect.addEventListener("change", () => {
+  const districtId = zelaSelect.value;
+  thanaSelect.innerHTML = "";
+
+  if (!districtId) {
+    thanaSelect.disabled = true;
+    const opt = document.createElement("option");
+    opt.value = "";
+    opt.textContent = "আগে জেলা বেছে নিন";
+    thanaSelect.appendChild(opt);
+    updateSummary();
+    return;
+  }
+
+  thanaSelect.disabled = false;
+  const placeholder = document.createElement("option");
+  placeholder.value = "";
+  placeholder.textContent = "থানা বেছে নিন";
+  thanaSelect.appendChild(placeholder);
+
+  (BD_UPAZILAS[districtId] || []).forEach((name) => {
+    const opt = document.createElement("option");
+    opt.value = name;
+    opt.textContent = name;
+    thanaSelect.appendChild(opt);
+  });
+
+  updateSummary();
+});
+
+function isDhakaSelected() {
+  if (!zelaSelect.value) return true; // default to Dhaka charge until chosen
+  const opt = zelaSelect.options[zelaSelect.selectedIndex];
+  return opt.dataset.isDhaka === "1";
+}
+
 function currentDeliveryCharge() {
-  const opt = districtSelect.options[districtSelect.selectedIndex];
-  return parseInt(opt.dataset.charge, 10);
+  return isDhakaSelected() ? DHAKA_CHARGE : OUTSIDE_DHAKA_CHARGE;
 }
 
 function updateSummary() {
@@ -45,7 +93,6 @@ document.getElementById("qtyMinus").addEventListener("click", () => {
   qtyInput.value = Math.max(1, (parseInt(qtyInput.value, 10) || 1) - 1);
   updateSummary();
 });
-districtSelect.addEventListener("change", updateSummary);
 
 colorOptions.forEach((opt) => {
   opt.addEventListener("click", () => {
@@ -60,6 +107,12 @@ updateSummary();
 form.addEventListener("submit", async (e) => {
   e.preventDefault();
 
+  if (!zelaSelect.value || !thanaSelect.value) {
+    formStatus.dataset.state = "error";
+    formStatus.textContent = "অনুগ্রহ করে জেলা ও থানা বেছে নিন।";
+    return;
+  }
+
   if (!ORDER_ENDPOINT) {
     formStatus.dataset.state = "error";
     formStatus.textContent =
@@ -71,13 +124,16 @@ form.addEventListener("submit", async (e) => {
   const delivery = currentDeliveryCharge();
   const productTotal = PRODUCT_PRICE * qty;
   const grandTotal = productTotal + delivery;
+  const zelaName = zelaSelect.options[zelaSelect.selectedIndex].textContent;
 
   const payload = {
     product: "Q10 HiFi Stereo Sports Earbuds",
     name: document.getElementById("name").value,
     phone: document.getElementById("phone").value,
     address: document.getElementById("address").value,
-    district: districtSelect.value === "dhaka" ? "ঢাকার ভিতরে" : "ঢাকার বাইরে",
+    zela: zelaName,
+    thana: thanaSelect.value,
+    district: isDhakaSelected() ? "ঢাকার ভিতরে" : "ঢাকার বাইরে",
     color: colorInput.value,
     quantity: qty,
     unitPrice: PRODUCT_PRICE,
@@ -104,6 +160,8 @@ form.addEventListener("submit", async (e) => {
     formStatus.dataset.state = "success";
     formStatus.textContent = "ধন্যবাদ! আপনার অর্ডারটি গৃহীত হয়েছে। শীঘ্রই আমরা কল করে কনফার্ম করবো।";
     form.reset();
+    thanaSelect.innerHTML = '<option value="">আগে জেলা বেছে নিন</option>';
+    thanaSelect.disabled = true;
     colorOptions.forEach((o) => o.classList.remove("is-selected"));
     colorOptions[0].classList.add("is-selected");
     colorInput.value = colorOptions[0].dataset.color;
@@ -117,3 +175,4 @@ form.addEventListener("submit", async (e) => {
       "দুঃখিত, অর্ডার পাঠাতে সমস্যা হয়েছে। অনুগ্রহ করে সরাসরি কল করুন।";
   }
 });
+
