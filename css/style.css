@@ -94,7 +94,7 @@ section {
   justify-content: space-between;
 }
 .topbar-logo img {
-  height: 30px;
+  height: 50px;
 }
 .topbar-call {
   display: flex;
