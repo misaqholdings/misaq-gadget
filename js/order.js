@@ -1,20 +1,24 @@
 // ============================================================
-// MISAQ GADGET — Order form logic
+// MISAQ GADGET — Order form logic (shared across all products)
 // Submits to a Google Apps Script Web App which appends the
 // order as a row in a Google Sheet. See README.md for setup.
+//
+// This file is now product-agnostic — the product name and price
+// come from data-product / data-price attributes on the <form>
+// element itself, set individually on each product page. So when
+// you add a new product, you never need to edit this file.
 // ============================================================
 
 // TODO: paste your deployed Apps Script Web App URL here.
 const ORDER_ENDPOINT = "";
 
-const PRODUCT_PRICE = 950;
-
 const form = document.getElementById("orderForm");
+const PRODUCT_NAME = form.dataset.product || "Unknown Product";
+const PRODUCT_PRICE = parseInt(form.dataset.price, 10) || 0;
+
 const qtyInput = document.getElementById("quantity");
 const deliveryZoneInput = document.getElementById("deliveryZone");
-const deliveryOptions = document.querySelectorAll(".order-form .color-select:nth-of-type(1) .color-option");
 const colorInput = document.getElementById("color");
-const colorOptions = document.querySelectorAll("#order-form .color-select .color-option[data-color]");
 const sumProduct = document.getElementById("sumProduct");
 const sumDelivery = document.getElementById("sumDelivery");
 const sumTotal = document.getElementById("sumTotal");
@@ -56,7 +60,7 @@ document.querySelectorAll('.field .color-select .color-option[data-charge]').for
   });
 });
 
-// ---- Color selector (সাদা / কালো) ----
+// ---- Color selector (সাদা / কালো, etc.) ----
 document.querySelectorAll('.field .color-select .color-option[data-color]').forEach((opt) => {
   opt.addEventListener("click", () => {
     document.querySelectorAll('.field .color-select .color-option[data-color]').forEach((o) => o.classList.remove("is-selected"));
@@ -83,7 +87,7 @@ form.addEventListener("submit", async (e) => {
   const grandTotal = productTotal + delivery;
 
   const payload = {
-    product: "Q10 HiFi Stereo Sports Earbuds",
+    product: PRODUCT_NAME,
     name: document.getElementById("name").value,
     phone: document.getElementById("phone").value,
     address: document.getElementById("address").value,
