@@ -316,6 +316,9 @@ section {
   flex-shrink: 0;
   margin-top: 2px;
 }
+.package-list.list-no svg {
+  color: var(--red);
+}
 
 /* ---- Trust row ---- */
 .trust-row {
@@ -494,6 +497,66 @@ section {
 .site-footer a {
   color: var(--red-deep);
   font-weight: 600;
+}
+.footer-links {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 10px;
+  margin-bottom: 14px;
+  font-size: 13.5px;
+}
+.footer-links a {
+  color: var(--red-deep);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.footer-links a:hover {
+  color: var(--red);
+}
+.footer-links .sep {
+  color: var(--line);
+}
+
+/* ---- Simple content / policy pages ---- */
+.policy-hero {
+  background: var(--paper-soft);
+  padding: clamp(32px, 6vw, 48px) 0;
+  text-align: center;
+}
+.policy-hero h1 {
+  font-size: clamp(24px, 5vw, 30px);
+  margin-bottom: 8px;
+}
+.policy-hero p {
+  color: var(--ink-soft);
+  max-width: 52ch;
+  margin: 0 auto;
+}
+.policy-body h2 {
+  font-size: 19px;
+  color: var(--red-deep);
+  margin-top: 8px;
+}
+.policy-body p {
+  color: var(--ink-soft);
+  font-size: 15px;
+}
+.info-box {
+  background: var(--paper-soft);
+  border-radius: 14px;
+  padding: 18px 20px;
+  margin: 16px 0;
+}
+.info-box p {
+  margin: 6px 0;
+  color: var(--ink);
+  font-size: 15px;
+}
+.info-box strong {
+  color: var(--red-deep);
 }
 
 /* ---- Sticky mobile CTA ---- */
