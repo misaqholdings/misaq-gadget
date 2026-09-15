@@ -11,21 +11,73 @@
 <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&family=Poppins:wght@600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css" />
 <style>
-  .home-hero { text-align: center; padding: 56px 0 24px; }
-  .home-hero img.logo { height: 64px; margin: 0 auto 18px; }
-  .home-hero h1 { font-size: clamp(22px, 5vw, 28px); }
-  .home-hero p { color: var(--ink-soft); max-width: 46ch; margin: 0 auto; }
-  .product-grid { display: grid; gap: 16px; margin-top: 24px; }
-  .product-card {
-    display: flex; gap: 14px; align-items: center;
-    border: 1px solid var(--line); border-radius: 14px; padding: 14px;
-    background: #fff;
+  .home-hero {
+    text-align: center;
+    padding: 52px 0 40px;
+    background: radial-gradient(120% 100% at 50% 0%, var(--red-soft) 0%, var(--paper) 62%);
   }
-  .product-card img { width: 90px; height: 90px; object-fit: cover; border-radius: 10px; }
-  .product-card .info { flex: 1; }
-  .product-card h3 { font-size: 16px; margin: 0 0 4px; }
-  .product-card .price { color: var(--red); font-family: var(--font-en); font-weight: 700; }
-  .product-card .old-price { color: var(--ink-soft); text-decoration: line-through; font-size: 13px; margin-right: 6px; }
+  .home-hero img.logo { height: 68px; margin: 0 auto 16px; }
+  .home-hero h1 { font-size: clamp(24px, 5.5vw, 32px); }
+  .home-hero p { color: var(--ink-soft); max-width: 46ch; margin: 0 auto; }
+
+  .home-trust {
+    padding: 22px 0;
+    border-top: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+    background: var(--paper-soft);
+  }
+
+  .catalog-heading {
+    text-align: center;
+    padding-top: 40px;
+  }
+  .catalog-heading h2 { font-size: clamp(19px, 4vw, 22px); margin-bottom: 4px; }
+  .catalog-heading p { color: var(--ink-soft); font-size: 14px; margin: 0; }
+
+  .product-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 18px;
+    margin: 24px 0 8px;
+  }
+  .product-card {
+    display: block;
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    background: #fff;
+    overflow: hidden;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+  }
+  .product-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 24px rgba(20, 22, 28, 0.08);
+  }
+  .product-card .thumb {
+    aspect-ratio: 1 / 1;
+    overflow: hidden;
+    background: var(--paper-soft);
+  }
+  .product-card .thumb img { width: 100%; height: 100%; object-fit: cover; }
+  .product-card .info { padding: 14px; }
+  .product-card h3 {
+    font-size: 15px;
+    margin: 0 0 8px;
+    color: var(--ink);
+    line-height: 1.4;
+  }
+  .product-card .price-line { display: flex; align-items: baseline; gap: 8px; }
+  .product-card .old-price {
+    color: var(--ink-soft);
+    text-decoration: line-through;
+    font-family: var(--font-en);
+    font-size: 12.5px;
+  }
+  .product-card .price {
+    color: var(--red);
+    font-family: var(--font-en);
+    font-weight: 700;
+    font-size: 17px;
+  }
 </style>
 </head>
 <body style="padding-bottom: 0;">
@@ -46,14 +98,48 @@
       <img src="images/logo.png" alt="MISAQ Gadget" class="logo" />
       <h1>অরিজিনাল গ্যাজেট, সেরা দামে</h1>
       <p>MISAQ HOLDINGS-এর অনলাইন গ্যাজেট স্টোর। ক্যাশ অন ডেলিভারিতে সারাদেশে ডেলিভারি।</p>
+    </div>
+  </section>
 
+  <section class="home-trust">
+    <div class="wrap">
+      <div class="trust-row">
+        <div class="trust-item">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="2" y="6" width="20" height="12" rx="2"/><path d="M2 10h20"/></svg>
+          <span>ক্যাশ অন ডেলিভারি</span>
+        </div>
+        <div class="trust-item">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 12h13l-4-4m4 4-4 4"/><path d="M16 5h2a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2h-2"/></svg>
+          <span>সারাদেশে ডেলিভারি</span>
+        </div>
+        <div class="trust-item">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+          <span>সরাসরি সাপোর্ট</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="catalog-heading">
+    <div class="wrap">
+      <h2>আমাদের প্রোডাক্টসমূহ</h2>
+      <p>প্রতিটি পণ্য যাচাই করে সংগ্রহ করা হয়</p>
+    </div>
+  </section>
+
+  <section style="padding-top:0;">
+    <div class="wrap">
       <div class="product-grid">
         <a href="q10-earbuds/index.html" class="product-card">
-          <img src="q10-earbuds/images/q10-banner.jpg" alt="Q10 HiFi Stereo Sports Earbuds" />
+          <div class="thumb">
+            <img src="q10-earbuds/images/q10-banner.jpg" alt="Q10 HiFi Stereo Sports Earbuds" />
+          </div>
           <div class="info">
             <h3>Q10 HiFi Stereo Sports Earbuds</h3>
-            <span class="old-price">৳1250</span>
-            <span class="price">৳950</span>
+            <div class="price-line">
+              <span class="old-price">৳1250</span>
+              <span class="price">৳950</span>
+            </div>
           </div>
         </a>
       </div>
@@ -64,8 +150,10 @@
 <footer class="site-footer">
   <div class="footer-links">
     <a href="contact.html">Contact Us</a>
-    <a href="returns-refunds.html">Returns & Refunds</a>
-    <a href="terms-conditions.html">Terms & Conditions</a>
+    <span class="sep">|</span>
+    <a href="returns-refunds.html">Returns &amp; Refunds</a>
+    <span class="sep">|</span>
+    <a href="terms-conditions.html">Terms &amp; Conditions</a>
   </div>
   <p>একটি <strong>MISAQ HOLDINGS</strong>-এর উদ্যোগ</p>
 </footer>
