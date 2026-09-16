@@ -23,7 +23,7 @@
 // ============================================================
 
 // TODO: paste your deployed Apps Script Web App URL here.
-const ORDER_ENDPOINT = "https://script.google.com/macros/s/AKfycbwmTbNg3Ed4X3dlRfry7zPiWBmYSJpTyQ3_M1V_95FZBEaO-Gsdt3cJEaoUwOPAdOEgWg/exec";
+const ORDER_ENDPOINT = "";
 
 const form = document.getElementById("orderForm");
 const PRODUCT_NAME = form.dataset.product || "Unknown Product";
