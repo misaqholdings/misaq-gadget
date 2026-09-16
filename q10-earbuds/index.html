@@ -188,18 +188,18 @@
         <div class="field">
           <label>ডেলিভারি ফি বেছে নিন</label>
           <div class="color-select">
-            <div class="color-option is-selected" data-charge="70">ঢাকার ভিতরে (৳70)</div>
+            <div class="color-option" data-charge="70">ঢাকার ভিতরে (৳70)</div>
             <div class="color-option" data-charge="120">ঢাকার বাইরে (৳120)</div>
           </div>
-          <input type="hidden" id="deliveryZone" name="deliveryZone" value="70" />
+          <input type="hidden" id="deliveryZone" name="deliveryZone" value="" />
         </div>
         <div class="field">
           <label>কালার বেছে নিন</label>
           <div class="color-select">
-            <div class="color-option is-selected" data-color="সাদা">সাদা (White)</div>
+            <div class="color-option" data-color="সাদা">সাদা (White)</div>
             <div class="color-option" data-color="কালো">কালো (Black)</div>
           </div>
-          <input type="hidden" id="color" name="color" value="সাদা" />
+          <input type="hidden" id="color" name="color" value="" />
         </div>
         <div class="field">
           <label>পরিমাণ</label>
@@ -212,8 +212,8 @@
 
         <div class="order-summary">
           <div class="order-summary-row"><span>পণ্যের মূল্য</span><span id="sumProduct">৳950 x 1</span></div>
-          <div class="order-summary-row"><span>ডেলিভারি চার্জ</span><span id="sumDelivery">৳70</span></div>
-          <div class="order-summary-row total"><span>সর্বমোট</span><span id="sumTotal">৳1020</span></div>
+          <div class="order-summary-row"><span>ডেলিভারি চার্জ</span><span id="sumDelivery">বেছে নিন</span></div>
+          <div class="order-summary-row total"><span>সর্বমোট</span><span id="sumTotal">৳950 + ডেলিভারি</span></div>
         </div>
 
         <button type="submit" class="btn-cta">অর্ডার কনফার্ম করুন</button>
@@ -253,7 +253,7 @@
   </footer>
 
 <div class="sticky-cta">
-  <span class="price" id="stickyPrice">৳950</span>
+  <span class="price" id="stickyPrice">৳950+</span>
   <a href="#order-form" class="btn-cta">অর্ডার করুন</a>
 </div>
 
