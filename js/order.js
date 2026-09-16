@@ -13,6 +13,13 @@
 // prevents an accidental order going through with the wrong
 // delivery zone or color just because a default was silently
 // selected for them.
+//
+// COLOR/SIZE IS OPTIONAL PER PRODUCT: if a product has no
+// color/size variation, simply remove that <div class="field">
+// block (and its #color hidden input) from that product's HTML.
+// This script detects whether #color exists and skips all
+// color-related logic and validation when it doesn't — no other
+// change needed.
 // ============================================================
 
 // TODO: paste your deployed Apps Script Web App URL here.
@@ -24,12 +31,14 @@ const PRODUCT_PRICE = parseInt(form.dataset.price, 10) || 0;
 
 const qtyInput = document.getElementById("quantity");
 const deliveryZoneInput = document.getElementById("deliveryZone");
-const colorInput = document.getElementById("color");
+const colorInput = document.getElementById("color"); // may be null — that's fine
 const sumProduct = document.getElementById("sumProduct");
 const sumDelivery = document.getElementById("sumDelivery");
 const sumTotal = document.getElementById("sumTotal");
 const stickyPrice = document.getElementById("stickyPrice");
 const formStatus = document.getElementById("formStatus");
+
+const HAS_COLOR = colorInput !== null;
 
 // Returns the delivery charge as a number, or null if nothing
 // has been selected yet.
@@ -75,24 +84,32 @@ document.querySelectorAll('.field .color-select .color-option[data-charge]').for
   });
 });
 
-// ---- Color selector (সাদা / কালো, etc.) ----
-document.querySelectorAll('.field .color-select .color-option[data-color]').forEach((opt) => {
-  opt.addEventListener("click", () => {
-    document.querySelectorAll('.field .color-select .color-option[data-color]').forEach((o) => o.classList.remove("is-selected"));
-    opt.classList.add("is-selected");
-    colorInput.value = opt.dataset.color;
+// ---- Color selector (সাদা / কালো, etc.) — only wired up if this product has one ----
+if (HAS_COLOR) {
+  document.querySelectorAll('.field .color-select .color-option[data-color]').forEach((opt) => {
+    opt.addEventListener("click", () => {
+      document.querySelectorAll('.field .color-select .color-option[data-color]').forEach((o) => o.classList.remove("is-selected"));
+      opt.classList.add("is-selected");
+      colorInput.value = opt.dataset.color;
+    });
   });
-});
+}
 
 updateSummary();
 
 form.addEventListener("submit", async (e) => {
   e.preventDefault();
 
-  // Block submission if delivery fee or color wasn't actively chosen.
-  if (deliveryZoneInput.value === "" || colorInput.value === "") {
+  // Block submission if delivery fee wasn't chosen, or (for products
+  // that have color/size) if that wasn't chosen either.
+  const deliveryMissing = deliveryZoneInput.value === "";
+  const colorMissing = HAS_COLOR && colorInput.value === "";
+
+  if (deliveryMissing || colorMissing) {
     formStatus.dataset.state = "error";
-    formStatus.textContent = "অনুগ্রহ করে ডেলিভারি ফি এবং কালার বেছে নিন।";
+    formStatus.textContent = HAS_COLOR
+      ? "অনুগ্রহ করে ডেলিভারি ফি এবং কালার বেছে নিন।"
+      : "অনুগ্রহ করে ডেলিভারি ফি বেছে নিন।";
     return;
   }
 
@@ -114,7 +131,7 @@ form.addEventListener("submit", async (e) => {
     phone: document.getElementById("phone").value,
     address: document.getElementById("address").value,
     deliveryZone: delivery === 70 ? "ঢাকার ভিতরে" : "ঢাকার বাইরে",
-    color: colorInput.value,
+    color: HAS_COLOR ? colorInput.value : "N/A",
     quantity: qty,
     unitPrice: PRODUCT_PRICE,
     deliveryCharge: delivery,
@@ -143,8 +160,10 @@ form.addEventListener("submit", async (e) => {
     // exact accidental-order problem this fix was meant to solve.
     document.querySelectorAll('.field .color-select .color-option[data-charge]').forEach((o) => o.classList.remove("is-selected"));
     deliveryZoneInput.value = "";
-    document.querySelectorAll('.field .color-select .color-option[data-color]').forEach((o) => o.classList.remove("is-selected"));
-    colorInput.value = "";
+    if (HAS_COLOR) {
+      document.querySelectorAll('.field .color-select .color-option[data-color]').forEach((o) => o.classList.remove("is-selected"));
+      colorInput.value = "";
+    }
 
     updateSummary();
 
