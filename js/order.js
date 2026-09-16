@@ -7,6 +7,12 @@
 // come from data-product / data-price attributes on the <form>
 // element itself, set individually on each product page. So when
 // you add a new product, you never need to edit this file.
+//
+// IMPORTANT: Delivery fee and color are NOT pre-selected by
+// default. The customer must actively click one of each — this
+// prevents an accidental order going through with the wrong
+// delivery zone or color just because a default was silently
+// selected for them.
 // ============================================================
 
 // TODO: paste your deployed Apps Script Web App URL here.
@@ -25,20 +31,29 @@ const sumTotal = document.getElementById("sumTotal");
 const stickyPrice = document.getElementById("stickyPrice");
 const formStatus = document.getElementById("formStatus");
 
+// Returns the delivery charge as a number, or null if nothing
+// has been selected yet.
 function currentDeliveryCharge() {
-  return parseInt(deliveryZoneInput.value, 10);
+  return deliveryZoneInput.value === "" ? null : parseInt(deliveryZoneInput.value, 10);
 }
 
 function updateSummary() {
   const qty = parseInt(qtyInput.value, 10) || 1;
   const delivery = currentDeliveryCharge();
   const productTotal = PRODUCT_PRICE * qty;
-  const grandTotal = productTotal + delivery;
 
   sumProduct.textContent = `৳${PRODUCT_PRICE} x ${qty} = ৳${productTotal}`;
-  sumDelivery.textContent = `৳${delivery}`;
-  sumTotal.textContent = `৳${grandTotal}`;
-  stickyPrice.textContent = `৳${grandTotal}`;
+
+  if (delivery === null) {
+    sumDelivery.textContent = "বেছে নিন";
+    sumTotal.textContent = `৳${productTotal} + ডেলিভারি`;
+    stickyPrice.textContent = `৳${productTotal}+`;
+  } else {
+    const grandTotal = productTotal + delivery;
+    sumDelivery.textContent = `৳${delivery}`;
+    sumTotal.textContent = `৳${grandTotal}`;
+    stickyPrice.textContent = `৳${grandTotal}`;
+  }
 }
 
 document.getElementById("qtyPlus").addEventListener("click", () => {
@@ -73,6 +88,13 @@ updateSummary();
 
 form.addEventListener("submit", async (e) => {
   e.preventDefault();
+
+  // Block submission if delivery fee or color wasn't actively chosen.
+  if (deliveryZoneInput.value === "" || colorInput.value === "") {
+    formStatus.dataset.state = "error";
+    formStatus.textContent = "অনুগ্রহ করে ডেলিভারি ফি এবং কালার বেছে নিন।";
+    return;
+  }
 
   if (!ORDER_ENDPOINT) {
     formStatus.dataset.state = "error";
@@ -115,12 +137,15 @@ form.addEventListener("submit", async (e) => {
     formStatus.dataset.state = "success";
     formStatus.textContent = "ধন্যবাদ! আপনার অর্ডারটি গৃহীত হয়েছে। শীঘ্রই আমরা কল করে কনফার্ম করবো।";
     form.reset();
+
+    // Clear delivery & color selections back to "nothing selected".
+    // Do NOT re-apply a default here — that would bring back the
+    // exact accidental-order problem this fix was meant to solve.
     document.querySelectorAll('.field .color-select .color-option[data-charge]').forEach((o) => o.classList.remove("is-selected"));
-    document.querySelector('.field .color-select .color-option[data-charge="70"]').classList.add("is-selected");
-    deliveryZoneInput.value = "70";
+    deliveryZoneInput.value = "";
     document.querySelectorAll('.field .color-select .color-option[data-color]').forEach((o) => o.classList.remove("is-selected"));
-    document.querySelector('.field .color-select .color-option[data-color]').classList.add("is-selected");
-    colorInput.value = document.querySelector('.field .color-select .color-option[data-color]').dataset.color;
+    colorInput.value = "";
+
     updateSummary();
 
     // Facebook Pixel: track a Lead/Purchase event here once Pixel is set up.
