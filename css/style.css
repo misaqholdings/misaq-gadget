@@ -415,10 +415,11 @@ section {
 }
 .color-select {
   display: flex;
+  flex-wrap: wrap;
   gap: 10px;
 }
 .color-option {
-  flex: 1;
+  flex: 1 1 40%;
   border: 2px solid var(--line);
   border-radius: 10px;
   padding: 10px;
