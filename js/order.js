@@ -1,177 +1,189 @@
-// ============================================================
-// MISAQ GADGET — Order form logic (shared across all products)
-// Submits to a Google Apps Script Web App which appends the
-// order as a row in a Google Sheet. See README.md for setup.
-//
-// This file is now product-agnostic — the product name and price
-// come from data-product / data-price attributes on the <form>
-// element itself, set individually on each product page. So when
-// you add a new product, you never need to edit this file.
-//
-// IMPORTANT: Delivery fee and color are NOT pre-selected by
-// default. The customer must actively click one of each — this
-// prevents an accidental order going through with the wrong
-// delivery zone or color just because a default was silently
-// selected for them.
-//
-// COLOR/SIZE IS OPTIONAL PER PRODUCT: if a product has no
-// color/size variation, simply remove that <div class="field">
-// block (and its #color hidden input) from that product's HTML.
-// This script detects whether #color exists and skips all
-// color-related logic and validation when it doesn't — no other
-// change needed.
-// ============================================================
+// আপনার নিজের তথ্য এখানে বসান
+var NOTIFY_EMAIL = "your-email@gmail.com";
+var TELEGRAM_BOT_TOKEN = "8569953644:AAHNeaVuG5jol3lUOQTpKxY6fCAZ9DkOLCc";
+var TELEGRAM_CHAT_ID = "5137827121";
+var META_PIXEL_ID = "2296738321065012";
+var META_CAPI_ACCESS_TOKEN = "এখানে-আপনার-Access-Token-বসান";
 
-// TODO: paste your deployed Apps Script Web App URL here.
-const ORDER_ENDPOINT = "https://script.google.com/macros/s/AKfycbwmTbNg3Ed4X3dlRfry7zPiWBmYSJpTyQ3_M1V_95FZBEaO-Gsdt3cJEaoUwOPAdOEgWg/exec";
+// Sheet কলাম নম্বর (A=1, B=2, ...) — নতুন কলাম যোগ করলে এখানেও মিলিয়ে নিন
+var COL = {
+  TIMESTAMP: 1, PRODUCT: 2, NAME: 3, PHONE: 4, ADDRESS: 5,
+  DELIVERY_ZONE: 6, COLOR: 7, QUANTITY: 8, UNIT_PRICE: 9,
+  DELIVERY_CHARGE: 10, TOTAL: 11, STATUS: 12, EVENT_ID: 13, CAPI_SENT: 14
+};
 
-const form = document.getElementById("orderForm");
-const PRODUCT_NAME = form.dataset.product || "Unknown Product";
-const PRODUCT_PRICE = parseInt(form.dataset.price, 10) || 0;
+function doPost(e) {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+  var data = JSON.parse(e.postData.contents);
 
-const qtyInput = document.getElementById("quantity");
-const deliveryZoneInput = document.getElementById("deliveryZone");
-const colorInput = document.getElementById("color"); // may be null — that's fine
-const sumProduct = document.getElementById("sumProduct");
-const sumDelivery = document.getElementById("sumDelivery");
-const sumTotal = document.getElementById("sumTotal");
-const stickyPrice = document.getElementById("stickyPrice");
-const formStatus = document.getElementById("formStatus");
+  sheet.appendRow([
+    new Date(),
+    data.product,
+    data.name,
+    data.phone,
+    data.address,
+    data.deliveryZone,
+    data.color,
+    data.quantity,
+    data.unitPrice,
+    data.deliveryCharge,
+    data.total,
+    "Pending",       // Status — আপনি ম্যানুয়ালি বদলাবেন
+    data.eventId,    // EventID — Lead event-এর সাথে dedup-এর জন্য
+    false            // CAPISent — Purchase এখনো পাঠানো হয়নি
+  ]);
 
-const HAS_COLOR = colorInput !== null;
+  sendEmailNotification(data);
+  sendTelegramNotification(data);
 
-// Returns the delivery charge as a number, or null if nothing
-// has been selected yet.
-function currentDeliveryCharge() {
-  return deliveryZoneInput.value === "" ? null : parseInt(deliveryZoneInput.value, 10);
-}
-
-function updateSummary() {
-  const qty = parseInt(qtyInput.value, 10) || 1;
-  const delivery = currentDeliveryCharge();
-  const productTotal = PRODUCT_PRICE * qty;
-
-  sumProduct.textContent = `৳${PRODUCT_PRICE} x ${qty} = ৳${productTotal}`;
-
-  if (delivery === null) {
-    sumDelivery.textContent = "বেছে নিন";
-    sumTotal.textContent = `৳${productTotal} + ডেলিভারি`;
-    stickyPrice.textContent = `৳${productTotal}+`;
-  } else {
-    const grandTotal = productTotal + delivery;
-    sumDelivery.textContent = `৳${delivery}`;
-    sumTotal.textContent = `৳${grandTotal}`;
-    stickyPrice.textContent = `৳${grandTotal}`;
-  }
-}
-
-document.getElementById("qtyPlus").addEventListener("click", () => {
-  qtyInput.value = Math.min(10, (parseInt(qtyInput.value, 10) || 1) + 1);
-  updateSummary();
-});
-document.getElementById("qtyMinus").addEventListener("click", () => {
-  qtyInput.value = Math.max(1, (parseInt(qtyInput.value, 10) || 1) - 1);
-  updateSummary();
-});
-
-// ---- Delivery fee selector (ঢাকার ভিতরে / বাইরে) ----
-document.querySelectorAll('.field .color-select .color-option[data-charge]').forEach((opt) => {
-  opt.addEventListener("click", () => {
-    document.querySelectorAll('.field .color-select .color-option[data-charge]').forEach((o) => o.classList.remove("is-selected"));
-    opt.classList.add("is-selected");
-    deliveryZoneInput.value = opt.dataset.charge;
-    updateSummary();
+  // এখানে "Lead" পাঠানো হচ্ছে — এটা শুধু "অর্ডার এসেছে" বোঝায়,
+  // আসল sale confirm করে না। আসল Purchase পাঠানো হবে নিচের
+  // handleStatusEdit()-এ, যখন কেউ Status "Delivered" করবে।
+  sendMetaCAPI("Lead", {
+    product: data.product,
+    phone: data.phone,
+    total: data.total,
+    quantity: data.quantity,
+    eventId: data.eventId
   });
-});
 
-// ---- Color selector (সাদা / কালো, etc.) — only wired up if this product has one ----
-if (HAS_COLOR) {
-  document.querySelectorAll('.field .color-select .color-option[data-color]').forEach((opt) => {
-    opt.addEventListener("click", () => {
-      document.querySelectorAll('.field .color-select .color-option[data-color]').forEach((o) => o.classList.remove("is-selected"));
-      opt.classList.add("is-selected");
-      colorInput.value = opt.dataset.color;
-    });
-  });
+  return ContentService
+    .createTextOutput(JSON.stringify({ result: "success" }))
+    .setMimeType(ContentService.MimeType.JSON);
 }
 
-updateSummary();
-
-form.addEventListener("submit", async (e) => {
-  e.preventDefault();
-
-  // Block submission if delivery fee wasn't chosen, or (for products
-  // that have color/size) if that wasn't chosen either.
-  const deliveryMissing = deliveryZoneInput.value === "";
-  const colorMissing = HAS_COLOR && colorInput.value === "";
-
-  if (deliveryMissing || colorMissing) {
-    formStatus.dataset.state = "error";
-    formStatus.textContent = HAS_COLOR
-      ? "অনুগ্রহ করে ডেলিভারি ফি এবং কালার বেছে নিন।"
-      : "অনুগ্রহ করে ডেলিভারি ফি বেছে নিন।";
-    return;
-  }
-
-  if (!ORDER_ENDPOINT) {
-    formStatus.dataset.state = "error";
-    formStatus.textContent =
-      "অর্ডার সিস্টেম এখনো সংযুক্ত হয়নি। অনুগ্রহ করে সরাসরি কল করুন।";
-    return;
-  }
-
-  const qty = parseInt(qtyInput.value, 10) || 1;
-  const delivery = currentDeliveryCharge();
-  const productTotal = PRODUCT_PRICE * qty;
-  const grandTotal = productTotal + delivery;
-
-  const payload = {
-    product: PRODUCT_NAME,
-    name: document.getElementById("name").value,
-    phone: document.getElementById("phone").value,
-    address: document.getElementById("address").value,
-    deliveryZone: delivery === 70 ? "ঢাকার ভিতরে" : "ঢাকার বাইরে",
-    color: HAS_COLOR ? colorInput.value : "N/A",
-    quantity: qty,
-    unitPrice: PRODUCT_PRICE,
-    deliveryCharge: delivery,
-    total: grandTotal,
-    submittedAt: new Date().toISOString(),
-  };
-
-  formStatus.dataset.state = "";
-  formStatus.textContent = "পাঠানো হচ্ছে...";
+function sendEmailNotification(data) {
+  var subject = "🛒 নতুন অর্ডার — " + data.product;
+  var body =
+    "নতুন একটি অর্ডার এসেছে:\n\n" +
+    "প্রোডাক্ট: " + data.product + "\n" +
+    "নাম: " + data.name + "\n" +
+    "ফোন: " + data.phone + "\n" +
+    "ঠিকানা: " + data.address + "\n" +
+    "ডেলিভারি: " + data.deliveryZone + "\n" +
+    "কালার: " + data.color + "\n" +
+    "পরিমাণ: " + data.quantity + "\n" +
+    "মোট: ৳" + data.total + "\n\n" +
+    "সময়: " + new Date().toLocaleString();
 
   try {
-    const res = await fetch(ORDER_ENDPOINT, {
-      method: "POST",
-      headers: { "Content-Type": "text/plain;charset=utf-8" },
-      body: JSON.stringify(payload),
-    });
-
-    if (!res.ok) throw new Error("Request failed");
-
-    formStatus.dataset.state = "success";
-    formStatus.textContent = "ধন্যবাদ! আপনার অর্ডারটি গৃহীত হয়েছে। শীঘ্রই আমরা কল করে কনফার্ম করবো।";
-    form.reset();
-
-    // Clear delivery & color selections back to "nothing selected".
-    // Do NOT re-apply a default here — that would bring back the
-    // exact accidental-order problem this fix was meant to solve.
-    document.querySelectorAll('.field .color-select .color-option[data-charge]').forEach((o) => o.classList.remove("is-selected"));
-    deliveryZoneInput.value = "";
-    if (HAS_COLOR) {
-      document.querySelectorAll('.field .color-select .color-option[data-color]').forEach((o) => o.classList.remove("is-selected"));
-      colorInput.value = "";
-    }
-
-    updateSummary();
-
-    // Facebook Pixel: track a Lead/Purchase event here once Pixel is set up.
-    // if (typeof fbq === "function") fbq('track', 'Lead');
+    MailApp.sendEmail(NOTIFY_EMAIL, subject, body);
   } catch (err) {
-    formStatus.dataset.state = "error";
-    formStatus.textContent =
-      "দুঃখিত, অর্ডার পাঠাতে সমস্যা হয়েছে। অনুগ্রহ করে সরাসরি কল করুন।";
   }
-});
+}
+
+function sendTelegramNotification(data) {
+  var message =
+    "🛒 নতুন অর্ডার!\n" +
+    "প্রোডাক্ট: " + data.product + "\n" +
+    "নাম: " + data.name + "\n" +
+    "ফোন: " + data.phone + "\n" +
+    "ঠিকানা: " + data.address + "\n" +
+    "ডেলিভারি: " + data.deliveryZone + "\n" +
+    "কালার: " + data.color + "\n" +
+    "পরিমাণ: " + data.quantity + "\n" +
+    "মোট: ৳" + data.total;
+
+  var url = "https://api.telegram.org/bot" + TELEGRAM_BOT_TOKEN + "/sendMessage";
+  var payload = { chat_id: TELEGRAM_CHAT_ID, text: message };
+  var options = {
+    method: "post",
+    contentType: "application/json",
+    payload: JSON.stringify(payload),
+    muteHttpExceptions: true
+  };
+
+  var response = UrlFetchApp.fetch(url, options);
+  Logger.log(response.getContentText());
+}
+
+// ---- Meta Conversions API — event_name প্যারামিটার দিয়ে ----
+// "Lead" (অর্ডার প্লেস) বা "Purchase" (আসলেই ডেলিভার হয়েছে) দুটোর জন্যই ব্যবহার হয়
+function sendMetaCAPI(eventName, data) {
+  var url = "https://graph.facebook.com/v20.0/" + META_PIXEL_ID +
+    "/events?access_token=" + META_CAPI_ACCESS_TOKEN;
+
+  var hashedPhone = Utilities.computeDigest(
+    Utilities.DigestAlgorithm.SHA_256,
+    (data.phone || "").replace(/[^0-9]/g, "")
+  ).map(function (b) {
+    return (b < 0 ? b + 256 : b).toString(16).padStart(2, "0");
+  }).join("");
+
+  var payload = {
+    data: [{
+      event_name: eventName,
+      event_time: Math.floor(Date.now() / 1000),
+      event_id: data.eventId,
+      action_source: "website",
+      user_data: {
+        ph: [hashedPhone]
+      },
+      custom_data: {
+        value: data.total,
+        currency: "BDT",
+        content_ids: [data.product],
+        content_type: "product",
+        num_items: data.quantity
+      }
+    }]
+  };
+
+  var options = {
+    method: "post",
+    contentType: "application/json",
+    payload: JSON.stringify(payload),
+    muteHttpExceptions: true
+  };
+
+  try {
+    var response = UrlFetchApp.fetch(url, options);
+    Logger.log(eventName + " CAPI response: " + response.getContentText());
+  } catch (err) {
+    Logger.log(eventName + " CAPI error: " + err);
+  }
+}
+
+// ---- এই ফাংশনটা INSTALLABLE TRIGGER হিসেবে বসাতে হবে (নিচের ধাপ দেখুন) ----
+// Status কলামে কেউ "Delivered" লিখলেই আসল Purchase event পাঠাবে,
+// একবারই পাঠাবে (CAPISent কলাম দিয়ে ডুপ্লিকেট আটকানো হচ্ছে)।
+function handleStatusEdit(e) {
+  if (!e || !e.range) return;
+  if (e.range.getColumn() !== COL.STATUS) return;
+
+  var newValue = e.value;
+  if (newValue !== "Delivered") return;
+
+  var sheet = e.range.getSheet();
+  var row = e.range.getRow();
+
+  var alreadySent = sheet.getRange(row, COL.CAPI_SENT).getValue();
+  if (alreadySent === true) return; // ডুপ্লিকেট Purchase আটকানো
+
+  var rowData = sheet.getRange(row, 1, 1, COL.CAPI_SENT).getValues()[0];
+
+  sendMetaCAPI("Purchase", {
+    product: rowData[COL.PRODUCT - 1],
+    phone: rowData[COL.PHONE - 1],
+    total: rowData[COL.TOTAL - 1],
+    quantity: rowData[COL.QUANTITY - 1],
+    eventId: "purchase_" + rowData[COL.EVENT_ID - 1] // Lead-এর থেকে আলাদা ID
+  });
+
+  sheet.getRange(row, COL.CAPI_SENT).setValue(true);
+}
+
+function testTelegram() {
+  sendTelegramNotification({
+    product: "Test", name: "Test", phone: "01700000000",
+    address: "Test", deliveryZone: "ঢাকার ভিতরে",
+    color: "সাদা", quantity: 1, total: 950
+  });
+}
+
+function testMetaCAPI() {
+  sendMetaCAPI("Lead", {
+    product: "Test", phone: "01700000000",
+    total: 950, quantity: 1, eventId: "test_" + Date.now()
+  });
+}
