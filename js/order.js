@@ -3,7 +3,7 @@ var NOTIFY_EMAIL = "your-email@gmail.com";
 var TELEGRAM_BOT_TOKEN = "8569953644:AAHNeaVuG5jol3lUOQTpKxY6fCAZ9DkOLCc";
 var TELEGRAM_CHAT_ID = "5137827121";
 var META_PIXEL_ID = "2296738321065012";
-var META_CAPI_ACCESS_TOKEN = "এখানে-আপনার-Access-Token-বসান";
+var META_CAPI_ACCESS_TOKEN = "EAAYCNQBMsE0BSoM9wMFA3eovghfDAgqYlY9HTBHN7xoQuTmfNHDZCp3mjjkVB4sJfeobg3xDPslDKAQbB3PxI7hfme68nMrri52j9uAiRyJLIH0YVZAymzNNNUaBOgMxQCiZBuphbU5EEFq15r8JswNakr4FR9fmj8nQHhccpZBkZCNzFy3IZA6N61T4yPBQZDZD";
 
 // Sheet কলাম নম্বর (A=1, B=2, ...) — নতুন কলাম যোগ করলে এখানেও মিলিয়ে নিন
 var COL = {
