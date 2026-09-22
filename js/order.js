@@ -21,16 +21,13 @@
 // color-related logic and validation when it doesn't — no other
 // change needed.
 //
-// META PIXEL — LEAD EVENT (not Purchase): fired directly from JS
-// right after a successful order submission. This is NOT a
-// confirmed sale — it's a COD order placed, which can still be
-// cancelled, refused at the door, or returned. The real Purchase
-// event fires later, server-side only, when you mark the order
-// "Delivered" in the Sheet (see Apps Script's handleStatusEdit).
-// A random eventId is generated per order and sent BOTH to fbq()
-// here (client-side Pixel) AND to Apps Script (server-side
-// Conversions API) so Meta can deduplicate the two Lead events
-// into one instead of double-counting it.
+// SUCCESS FLOW: on a confirmed successful order, this redirects
+// to /thank-you.html instead of showing an inline message. Order
+// details (including the eventId used for Pixel/CAPI dedup) are
+// stashed in sessionStorage first, and the Thank You page itself
+// fires the Meta Pixel "Lead" event — firing it there (rather
+// than right before this page navigates away) avoids the browser
+// cutting the request off mid-flight.
 // ============================================================
 
 // TODO: paste your deployed Apps Script Web App URL here.
@@ -154,7 +151,7 @@ form.addEventListener("submit", async (e) => {
     unitPrice: PRODUCT_PRICE,
     deliveryCharge: delivery,
     total: grandTotal,
-    eventId: eventId, // shared with fbq() below for Pixel/CAPI dedup
+    eventId: eventId, // shared with the Thank You page's fbq() call for dedup
     submittedAt: new Date().toISOString(),
   };
 
@@ -170,35 +167,24 @@ form.addEventListener("submit", async (e) => {
 
     if (!res.ok) throw new Error("Request failed");
 
-    formStatus.dataset.state = "success";
-    formStatus.textContent = "ধন্যবাদ! আপনার অর্ডারটি গৃহীত হয়েছে। শীঘ্রই আমরা কল করে কনফার্ম করবো।";
-
-    // Meta Pixel: Lead — order placed, NOT a confirmed sale.
-    // eventID matches the one sent to Apps Script so Meta can
-    // dedupe this against the server-side (CAPI) copy.
-    if (typeof fbq === "function") {
-      fbq('track', 'Lead', {
-        value: grandTotal,
-        currency: 'BDT',
-        content_ids: [PRODUCT_NAME],
-        content_type: 'product',
-        num_items: qty,
-      }, { eventID: eventId });
+    // Stash order details for the Thank You page (order summary +
+    // the Pixel Lead event fires there, not here).
+    try {
+      sessionStorage.setItem("misaq_order", JSON.stringify({
+        product: PRODUCT_NAME,
+        total: grandTotal,
+        quantity: qty,
+        eventId: eventId,
+      }));
+    } catch (err) {
+      // sessionStorage unavailable (private browsing etc.) — order
+      // still went through fine, the Thank You page will just show
+      // its generic version without the order summary.
     }
 
-    form.reset();
-
-    // Clear delivery & color selections back to "nothing selected".
-    // Do NOT re-apply a default here — that would bring back the
-    // exact accidental-order problem this fix was meant to solve.
-    document.querySelectorAll('.field .color-select .color-option[data-charge]').forEach((o) => o.classList.remove("is-selected"));
-    deliveryZoneInput.value = "";
-    if (HAS_COLOR) {
-      document.querySelectorAll('.field .color-select .color-option[data-color]').forEach((o) => o.classList.remove("is-selected"));
-      colorInput.value = "";
-    }
-
-    updateSummary();
+    // Path is relative to this product page's folder (e.g. q10-earbuds/),
+    // so it points up to the site root's thank-you.html.
+    window.location.href = "../thank-you.html";
   } catch (err) {
     formStatus.dataset.state = "error";
     formStatus.textContent =
