@@ -10,6 +10,100 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&family=Poppins:wght@600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css" />
+
+<!-- Meta Pixel Code -->
+<script>
+!function(f,b,e,v,n,t,s)
+{if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+n.queue=[];t=b.createElement(e);t.async=!0;
+t.src=v;s=b.getElementsByTagName(e)[0];
+s.parentNode.insertBefore(t,s)}(window, document,'script',
+'https://connect.facebook.net/en_US/fbevents.js');
+fbq('init', '2296738321065012');
+fbq('track', 'PageView');
+</script>
+<noscript><img height="1" width="1" style="display:none"
+src="https://www.facebook.com/tr?id=2296738321065012&ev=PageView&noscript=1"
+/></noscript>
+<!-- End Meta Pixel Code -->
+
+<style>
+  .contact-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 14px;
+    margin: 24px 0;
+  }
+  .contact-card {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 18px;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+  }
+  .contact-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 24px rgba(20, 22, 28, 0.06);
+  }
+  .contact-card .icon {
+    flex-shrink: 0;
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    background: var(--red-soft);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .contact-card .icon svg {
+    width: 22px;
+    height: 22px;
+    color: var(--red-deep);
+  }
+  .contact-card .label {
+    font-size: 13px;
+    color: var(--ink-soft);
+    margin-bottom: 3px;
+  }
+  .contact-card .value {
+    font-weight: 700;
+    color: var(--ink);
+    font-size: 15px;
+    line-height: 1.4;
+  }
+  .contact-card a.value {
+    color: var(--red-deep);
+    text-decoration: none;
+  }
+  .contact-card a.value:hover {
+    text-decoration: underline;
+  }
+  .hours-strip {
+    background: var(--paper-soft);
+    border-radius: 14px;
+    padding: 16px 18px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 4px;
+  }
+  .hours-strip svg {
+    width: 22px;
+    height: 22px;
+    color: var(--red);
+    flex-shrink: 0;
+  }
+  .hours-strip p {
+    margin: 0;
+    font-size: 14.5px;
+    color: var(--ink-soft);
+  }
+</style>
 </head>
 <body style="padding-bottom: 0;">
 
@@ -33,14 +127,56 @@
 
   <section>
     <div class="wrap">
-      <div class="info-box">
-        <p><strong>প্রতিষ্ঠান:</strong> MISAQ Gadget (একটি উদ্যোগ MISAQ HOLDINGS-এর)</p>
-        <p><strong>ফোন:</strong> <a href="tel:01911833674">01911833674</a></p>
-        <p><strong>ইমেইল:</strong> <a href="mailto:contact@misaqholdings.com">contact@misaqholdings.com</a></p>
-        <p><strong>ঠিকানা:</strong> House-54, Tetultala Road, North Badda, Badda, Dhaka-1212</p>
-        <p><strong>ফেসবুক পেজ:</strong> <a href="https://www.facebook.com/" target="_blank" rel="noopener">MISAQ Gadget</a></p>
+
+      <div class="contact-grid">
+        <div class="contact-card">
+          <div class="icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.362 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.338 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+          </div>
+          <div>
+            <div class="label">ফোন</div>
+            <a class="value" href="tel:01911833674">01911833674</a>
+          </div>
+        </div>
+
+        <div class="contact-card">
+          <div class="icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16v16H4z"/><path d="m4 6 8 7 8-7"/></svg>
+          </div>
+          <div>
+            <div class="label">ইমেইল</div>
+            <a class="value" href="mailto:contact@misaqholdings.com">contact@misaqholdings.com</a>
+          </div>
+        </div>
+
+        <div class="contact-card">
+          <div class="icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/></svg>
+          </div>
+          <div>
+            <div class="label">ফেসবুক পেজ</div>
+            <a class="value" href="https://www.facebook.com/misaqgadget" target="_blank" rel="noopener">MISAQ Gadget</a>
+          </div>
+        </div>
+
+        <div class="contact-card">
+          <div class="icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 12-9 12s-9-5-9-12a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+          </div>
+          <div>
+            <div class="label">ঠিকানা</div>
+            <div class="value">House-54, Tetultala Road, North Badda, Dhaka-1212</div>
+          </div>
+        </div>
       </div>
-      <p style="color:var(--ink-soft); font-size:14.5px;">সাধারণত সকাল ১০টা থেকে রাত ৮টার মধ্যে যোগাযোগ করলে দ্রুত উত্তর পাবেন। অর্ডার সংক্রান্ত জরুরি প্রয়োজনে সরাসরি কল করুন।</p>
+
+      <div class="hours-strip">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+        <p><strong>সাড়া দেওয়ার সময়:</strong> প্রতিদিন সকাল ১০টা থেকে রাত ৮টা — এই সময়ে যোগাযোগ করলে দ্রুততম উত্তর পাবেন। অর্ডার সংক্রান্ত জরুরি প্রয়োজনে সরাসরি কল করুন।</p>
+      </div>
+
+      <p style="margin-top:16px;">প্রতিষ্ঠান: <strong>MISAQ Gadget</strong> — একটি <strong>MISAQ HOLDINGS</strong>-এর উদ্যোগ।</p>
+
     </div>
   </section>
 </main>
