@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ধন্যবাদ! আপনার অর্ডার গৃহীত হয়েছে | MISAQ Gadget</title>
+<meta name="robots" content="noindex" />
+<link rel="icon" href="images/favicon.png" type="image/png" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&family=Poppins:wght@600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css" />
+
+<!-- Meta Pixel Code -->
+<script>
+!function(f,b,e,v,n,t,s)
+{if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+n.queue=[];t=b.createElement(e);t.async=!0;
+t.src=v;s=b.getElementsByTagName(e)[0];
+s.parentNode.insertBefore(t,s)}(window, document,'script',
+'https://connect.facebook.net/en_US/fbevents.js');
+fbq('init', '2296738321065012');
+fbq('track', 'PageView');
+</script>
+<noscript><img height="1" width="1" style="display:none"
+src="https://www.facebook.com/tr?id=2296738321065012&ev=PageView&noscript=1"
+/></noscript>
+<!-- End Meta Pixel Code -->
+
+<style>
+  .thanks-icon {
+    width: 64px;
+    height: 64px;
+    margin: 0 auto 16px;
+    color: var(--green);
+  }
+  .order-ref {
+    font-family: var(--font-en);
+    font-weight: 700;
+    color: var(--red-deep);
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="wrap">
+    <a href="index.html" class="topbar-logo"><img src="images/logo.png" alt="MISAQ Gadget" /></a>
+    <a href="tel:01911833674" class="topbar-call">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.362 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.338 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+      যোগাযোগ করুন
+    </a>
+  </div>
+</div>
+
+<main>
+  <section class="policy-hero">
+    <div class="wrap">
+      <svg class="thanks-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
+      <h1>ধন্যবাদ! আপনার অর্ডারটি গৃহীত হয়েছে</h1>
+      <p>আমাদের টিম শীঘ্রই আপনাকে কল করে অর্ডার কনফার্ম করবে। অনুগ্রহ করে ফোনটা হাতের কাছে রাখুন।</p>
+    </div>
+  </section>
+
+  <section>
+    <div class="wrap">
+      <div class="info-box" id="orderSummaryBox">
+        <p><strong>প্রোডাক্ট:</strong> <span id="orderProduct">—</span></p>
+        <p><strong>পরিমাণ:</strong> <span id="orderQty">—</span></p>
+        <p><strong>সর্বমোট:</strong> <span class="order-ref" id="orderTotal">—</span></p>
+      </div>
+
+      <div class="info-box">
+        <p><strong>ডেলিভারি সময়:</strong> ঢাকার ভেতরে ১-২ দিন, ঢাকার বাইরে ৩-৫ দিন</p>
+        <p><strong>পেমেন্ট:</strong> ক্যাশ অন ডেলিভারি — পণ্য হাতে পেয়ে টাকা দিন</p>
+        <p><strong>কোনো প্রশ্ন থাকলে:</strong> <a href="tel:01911833674">01911833674</a></p>
+      </div>
+
+      <a href="index.html" class="btn-cta" style="margin-top:8px;">আরও প্রোডাক্ট দেখুন</a>
+    </div>
+  </section>
+</main>
+
+<footer class="site-footer">
+  <div class="footer-links">
+    <a href="contact.html">Contact Us</a>
+    <span class="sep">|</span>
+    <a href="returns-refunds.html">Returns &amp; Refunds</a>
+    <span class="sep">|</span>
+    <a href="terms-conditions.html">Terms &amp; Conditions</a>
+  </div>
+  <p>একটি <strong>MISAQ HOLDINGS</strong>-এর উদ্যোগ</p>
+</footer>
+
+<script>
+(function () {
+  var raw = null;
+  try { raw = sessionStorage.getItem('misaq_order'); } catch (e) {}
+  var order = null;
+  try { order = raw ? JSON.parse(raw) : null; } catch (e) {}
+
+  if (order && order.eventId) {
+    document.getElementById('orderProduct').textContent = order.product || '—';
+    document.getElementById('orderQty').textContent = order.quantity || '—';
+    document.getElementById('orderTotal').textContent = '৳' + order.total;
+
+    // Meta Pixel: Lead — fired here (not on the order page) so the
+    // browser has time to actually send it before anything else happens.
+    // This is NOT a confirmed sale — see Apps Script for the real,
+    // delayed Purchase event that fires only when marked "Delivered".
+    if (typeof fbq === 'function') {
+      fbq('track', 'Lead', {
+        value: order.total,
+        currency: 'BDT',
+        content_ids: [order.product],
+        content_type: 'product',
+        num_items: order.quantity,
+      }, { eventID: order.eventId });
+    }
+
+    try { sessionStorage.removeItem('misaq_order'); } catch (e) {}
+  } else {
+    // Someone opened this page directly, not right after an order —
+    // hide the order-specific summary block.
+    document.getElementById('orderSummaryBox').style.display = 'none';
+  }
+})();
+</script>
+
+</body>
+</html>
