@@ -28,6 +28,17 @@
 // fires the Meta Pixel "Lead" event — firing it there (rather
 // than right before this page navigates away) avoids the browser
 // cutting the request off mid-flight.
+//
+// NO-CORS NOTE: the POST to Apps Script is sent with
+// mode: "no-cors". Google Apps Script Web Apps respond via a
+// redirect to script.googleusercontent.com, and the browser
+// often can't read that redirected response due to CORS —
+// causing fetch() to throw a network error even though the
+// server-side doPost() already ran successfully (Sheet row +
+// Telegram message go through regardless). With no-cors we don't
+// try to read the response at all (it comes back "opaque"), so
+// we just treat "fetch() didn't throw" as success — matching
+// what's actually happening on the server.
 // ============================================================
 
 // TODO: paste your deployed Apps Script Web App URL here.
@@ -159,13 +170,16 @@ form.addEventListener("submit", async (e) => {
   formStatus.textContent = "পাঠানো হচ্ছে...";
 
   try {
-    const res = await fetch(ORDER_ENDPOINT, {
+    // mode: "no-cors" — see note at top of file. We deliberately do
+    // NOT check res.ok here; with no-cors the response is opaque
+    // (status always 0), so a successful fetch() call (no throw)
+    // is the only signal we can rely on.
+    await fetch(ORDER_ENDPOINT, {
       method: "POST",
+      mode: "no-cors",
       headers: { "Content-Type": "text/plain;charset=utf-8" },
       body: JSON.stringify(payload),
     });
-
-    if (!res.ok) throw new Error("Request failed");
 
     // Stash order details for the Thank You page (order summary +
     // the Pixel Lead event fires there, not here).
@@ -186,6 +200,9 @@ form.addEventListener("submit", async (e) => {
     // so it points up to the site root's thank-you.html.
     window.location.href = "../thank-you.html";
   } catch (err) {
+    // This only fires on a genuine network failure (e.g. completely
+    // offline) — the no-cors request itself won't throw just because
+    // the response couldn't be read.
     formStatus.dataset.state = "error";
     formStatus.textContent =
       "দুঃখিত, অর্ডার পাঠাতে সমস্যা হয়েছে। অনুগ্রহ করে সরাসরি কল করুন।";
