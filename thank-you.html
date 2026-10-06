@@ -106,20 +106,6 @@ src="https://www.facebook.com/tr?id=2296738321065012&ev=PageView&noscript=1"
     document.getElementById('orderQty').textContent = order.quantity || '—';
     document.getElementById('orderTotal').textContent = '৳' + order.total;
 
-    // Meta Pixel: Lead — fired here (not on the order page) so the
-    // browser has time to actually send it before anything else happens.
-    // This is NOT a confirmed sale — see Apps Script for the real,
-    // delayed Purchase event that fires only when marked "Delivered".
-    if (typeof fbq === 'function') {
-      fbq('track', 'Lead', {
-        value: order.total,
-        currency: 'BDT',
-        content_ids: [order.product],
-        content_type: 'product',
-        num_items: order.quantity,
-      }, { eventID: order.eventId });
-    }
-
     try { sessionStorage.removeItem('misaq_order'); } catch (e) {}
   } else {
     // Someone opened this page directly, not right after an order —
