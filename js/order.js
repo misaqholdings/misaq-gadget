@@ -1197,6 +1197,12 @@ form.addEventListener(
       adId:
         ORDER_ATTRIBUTION.adId,
 
+      fbp: 
+        ORDER_ATTRIBUTION.fbp || "",
+      
+      fbc: 
+        ORDER_ATTRIBUTION.fbc || "",
+
 
       submittedAt:
         new Date()
