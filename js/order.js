@@ -375,7 +375,7 @@ function captureAttribution() {
   }
 
 
-  // ----------------------------------------------------------
+    // ----------------------------------------------------------
   // 5. Referrer fallback
   // ----------------------------------------------------------
 
@@ -390,26 +390,54 @@ function captureAttribution() {
           document.referrer
         );
 
-
       const referrerHost =
         referrerUrl.hostname
           .toLowerCase();
 
+      const currentHost =
+        window.location.hostname
+          .toLowerCase();
+
+
+      // ------------------------------------------------------
+      // Internal website navigation
+      //
+      // Example:
+      // homepage → Q86 product page
+      //
+      // This is not a new acquisition source.
+      // Treat as direct when no previous attribution exists.
+      // ------------------------------------------------------
 
       if (
+        referrerHost === currentHost
+      ) {
+
+        acquisition =
+          "direct";
+
+      }
+
+
+      // ------------------------------------------------------
+      // Facebook / Instagram organic referral
+      // ------------------------------------------------------
+
+      else if (
         isMetaReferrer(
           referrerHost
         )
       ) {
 
-        // fbclid can indicate a Facebook click,
-        // but without our own Ad IDs we do not
-        // automatically claim this as paid_meta.
-
         acquisition =
           "organic_meta";
 
       }
+
+
+      // ------------------------------------------------------
+      // Search engine organic referral
+      // ------------------------------------------------------
 
       else if (
         isSearchReferrer(
@@ -421,6 +449,11 @@ function captureAttribution() {
           "organic_search";
 
       }
+
+
+      // ------------------------------------------------------
+      // Other external referral
+      // ------------------------------------------------------
 
       else {
 
@@ -435,6 +468,18 @@ function captureAttribution() {
         "unknown";
 
     }
+
+  }
+
+
+  // ----------------------------------------------------------
+  // 6. No campaign information and no referrer
+  // ----------------------------------------------------------
+
+  else {
+
+    acquisition =
+      "direct";
 
   }
 
