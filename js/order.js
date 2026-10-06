@@ -236,7 +236,102 @@ function isSearchReferrer(
   );
 
 }
+// ============================================================
+// META BROWSER / CLICK IDENTIFIERS
+// ============================================================
 
+function getCookieValue(name) {
+
+  const cookies =
+    document.cookie
+      .split(";");
+
+  for (const cookie of cookies) {
+
+    const parts =
+      cookie
+        .trim()
+        .split("=");
+
+    const key =
+      parts.shift();
+
+    const value =
+      parts.join("=");
+
+    if (key === name) {
+
+      return decodeURIComponent(
+        value || ""
+      );
+
+    }
+
+  }
+
+  return "";
+
+}
+
+
+// ------------------------------------------------------------
+// Meta Browser ID (_fbp)
+// ------------------------------------------------------------
+
+function getMetaFbp() {
+
+  return getCookieValue(
+    "_fbp"
+  );
+
+}
+
+
+// ------------------------------------------------------------
+// Meta Click ID (_fbc)
+//
+// Priority:
+// 1. Existing _fbc cookie
+// 2. Create from fbclid when available
+// ------------------------------------------------------------
+
+function getMetaFbc(
+  fbclid
+) {
+
+  const existingFbc =
+    getCookieValue(
+      "_fbc"
+    );
+
+  if (existingFbc) {
+
+    return existingFbc;
+
+  }
+
+
+  fbclid =
+    String(
+      fbclid || ""
+    ).trim();
+
+
+  if (!fbclid) {
+
+    return "";
+
+  }
+
+
+  return (
+    "fb.1." +
+    Date.now() +
+    "." +
+    fbclid
+  );
+
+}
 
 // ------------------------------------------------------------
 // Capture attribution from current landing URL
@@ -288,7 +383,14 @@ function captureAttribution() {
       params,
       "fbclid"
     );
+  const fbp =
+    getMetaFbp();
 
+
+  const fbc =
+    getMetaFbc(
+    fbclid
+    );
 
   let acquisition =
     "unknown";
@@ -500,6 +602,12 @@ function captureAttribution() {
     fbclid:
       fbclid,
 
+    fbp:
+      fbp,
+
+    fbc:
+      fbc,
+
     utmSource:
       utmSource,
 
@@ -627,6 +735,14 @@ function getAttribution() {
 
           fbclid:
             parsed.fbclid ||
+            "",
+
+          fbp:
+            parsed.fbp ||
+            getMetaFbp(),
+
+          fbc:
+            parsed.fbc ||
             "",
 
           utmSource:
