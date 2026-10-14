@@ -12,7 +12,7 @@ jobs:
         run: |
           set -euo pipefail
           BASE='https://misaq-sales-bot-staging.misaqholdings.workers.dev'
-          for path in '/api/v1/catalog/products' '/api/v1/catalog/products/STAGING_TEST_Q86' '/api/v1/catalog/products/STAGING_TEST_Q86/variants' '/api/v1/intelligence/knowledge/STAGING_TEST_Q86' '/api/v1/intelligence/contents' '/api/v1/intelligence/resolve?content_id=123456'; do
+          for path in '/api/v1/intelligence/comments/review?id=1' '/api/v1/catalog/products' '/api/v1/catalog/products/STAGING_TEST_Q86' '/api/v1/catalog/products/STAGING_TEST_Q86/variants' '/api/v1/intelligence/knowledge/STAGING_TEST_Q86' '/api/v1/intelligence/contents' '/api/v1/intelligence/resolve?content_id=123456'; do
             code=$(curl --retry 2 --connect-timeout 10 --max-time 25 -sS -o /tmp/catalog-response -w '%{http_code}' "$BASE$path")
             echo "$path unauthenticated: $code"
             test "$code" = 401
