@@ -2,6 +2,13 @@
 async function phase07Intelligence(req,env,p,role,staff,actorId){
  const json=(v,s=200)=>new Response(JSON.stringify(v),{status:s,headers:{"content-type":"application/json","cache-control":"no-store"}});
  const err=(e,s=400)=>json({error:e},s);
+ if(p.startsWith("/api/v1/intelligence/bot/")){
+  if(role!=="integration"&&role!=="admin")return err("integration_required",403);
+  const productCode=p.split("/").filter(Boolean)[4];
+  if(req.method!=="GET"||!productCode||!/^[A-Z0-9_-]{3,64}$/.test(productCode))return err("not_found",404);
+  const row=await env.DB.prepare("SELECT p.product_code,p.product_name,p.sale_price,p.currency,p.status,k.specifications_json,k.faq_json,k.sales_instructions,k.escalation_rules,k.verified_information,k.prohibited_claims,k.features,k.package_contents,k.delivery_policy,k.payment_methods,k.warranty_policy,k.return_policy,k.version FROM products p JOIN product_ai_knowledge k ON k.product_code=p.product_code WHERE p.product_code=? AND p.status='active' AND k.approval_status='published'").bind(productCode).first();
+  return row?json({product:row}):err("published_product_not_found",404);
+ }
  if(role!=="admin"||!staff)return err("admin_staff_required",403);
  const parts=p.split("/").filter(Boolean),kind=parts[3],key=parts[4],sub=parts[5],method=req.method;
  const body=async()=>{const b=await req.json();if(!b||typeof b!=="object"||Array.isArray(b))throw Error("invalid_json");return b};
