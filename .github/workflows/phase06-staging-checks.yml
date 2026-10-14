@@ -34,3 +34,7 @@ jobs:
           echo "Invalid POST status: $code"
           test "$code" = 400
           grep -q invalid_order /tmp/bridge-post
+          code=$(curl --retry 2 --connect-timeout 10 --max-time 25 -sS -o /tmp/bridge-turnstile -w '%{http_code}' -X POST -H 'Origin: https://gadget.misaqholdings.com' -H 'Content-Type: application/json' --data '{"product_code":"Q86","order_id":"smoke_turnstile_12345678","quantity":1,"customer_name":"Staging QA","phone":"01712345678","address":"Test address Dhaka","turnstile_token":"invalid-token"}' "$URL")
+          echo "Invalid Turnstile status: $code"
+          test "$code" = 403
+          grep -q verification_failed /tmp/bridge-turnstile
