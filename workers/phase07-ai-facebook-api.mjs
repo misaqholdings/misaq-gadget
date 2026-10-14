@@ -1,0 +1,101 @@
+// Phase 07: staging-only AI knowledge and organic/paid Facebook content management.
+async function phase07Intelligence(req,env,p,role,staff,actorId){
+ const json=(v,s=200)=>new Response(JSON.stringify(v),{status:s,headers:{"content-type":"application/json","cache-control":"no-store"}});
+ const err=(e,s=400)=>json({error:e},s);
+ if(role!=="admin"||!staff)return err("admin_staff_required",403);
+ const parts=p.split("/").filter(Boolean),kind=parts[3],key=parts[4],sub=parts[5],method=req.method;
+ const body=async()=>{const b=await req.json();if(!b||typeof b!=="object"||Array.isArray(b))throw Error("invalid_json");return b};
+ const code=v=>typeof v==="string"&&/^[A-Z0-9_-]{3,64}$/.test(v);
+ const text=(v,n=10000)=>typeof v==="string"&&v.length<=n;
+ const audit=(type,id,action,oldV,newV)=>env.DB.prepare("INSERT INTO audit_logs(entity_type,entity_id,action,actor_type,actor_id,old_values_json,new_values_json) VALUES(?,?,?,'admin',?,?,?)").bind(type,String(id),action,actorId,JSON.stringify(oldV),JSON.stringify(newV));
+ try{
+ if(kind==="knowledge"&&key&&method==="GET"){
+ if(!code(key))return err("invalid_code");
+ const product=await env.DB.prepare("SELECT product_code,product_name,sale_price,currency,status FROM products WHERE product_code=?").bind(key).first();
+ if(!product)return err("not_found",404);
+ const knowledge=await env.DB.prepare("SELECT * FROM product_ai_knowledge WHERE product_code=?").bind(key).first();
+ return json({product,knowledge});
+ }
+ if(kind==="knowledge"&&key&&method==="PUT"){
+ if(!code(key))return err("invalid_code");const b=await body();
+ const allowed=["specifications","faq","sales_instructions","escalation_rules","verified_information","prohibited_claims","features","package_contents","delivery_policy","payment_methods","warranty_policy","return_policy"];
+ if(!Object.keys(b).length||Object.keys(b).some(k=>!allowed.includes(k)))return err("invalid_fields");
+ const product=await env.DB.prepare("SELECT product_code FROM products WHERE product_code=?").bind(key).first();if(!product)return err("not_found",404);
+ const old=await env.DB.prepare("SELECT * FROM product_ai_knowledge WHERE product_code=?").bind(key).first();
+ if(old&&old.approval_status!=="draft")return err("return_to_draft_before_editing",409);
+ const data={};for(const field of allowed){
+   const value=b[field]??(old?(field==="specifications"||field==="faq"?JSON.parse(old[field+"_json"]):old[field]):(field==="specifications"?{}:field==="faq"?[]:""));
+   if(field==="specifications"){if(!value||typeof value!=="object"||Array.isArray(value)||JSON.stringify(value).length>10000)return err("invalid_specifications");data.specifications_json=JSON.stringify(value)}
+   else if(field==="faq"){if(!Array.isArray(value)||value.length>100||JSON.stringify(value).length>30000||value.some(x=>!x||!text(x.question,500)||!text(x.answer,2000)))return err("invalid_faq");data.faq_json=JSON.stringify(value)}
+   else{if(!text(value))return err("invalid_"+field);data[field]=value}
+ }
+ const cols=Object.keys(data),vals=Object.values(data);
+ await env.DB.prepare("INSERT INTO product_ai_knowledge(product_code,"+cols.join(",")+") VALUES(?,"+cols.map(()=>"?").join(",")+") ON CONFLICT(product_code) DO UPDATE SET "+cols.map(k=>k+"=excluded."+k).join(",")+",version=product_ai_knowledge.version+1,updated_at=CURRENT_TIMESTAMP").bind(key,...vals).run();
+ await audit("product_knowledge",key,"draft_saved",{version:old?.version??0},{version:(old?.version??0)+1}).run();
+ return json({saved:true,product_code:key,approval_status:"draft"});
+ }
+ if(kind==="knowledge"&&key&&sub==="transition"&&method==="POST"){
+ const b=await body(),target=b.status;
+ if(!["draft","review","approved","published"].includes(target))return err("invalid_status");
+ const old=await env.DB.prepare("SELECT approval_status,version,verified_information FROM product_ai_knowledge WHERE product_code=?").bind(key).first();
+ if(!old)return err("not_found",404);
+ const transitions={draft:["review"],review:["draft","approved"],approved:["draft","published"],published:["draft"]};
+ if(!transitions[old.approval_status]?.includes(target))return err("invalid_transition",409);
+ if((target==="approved"||target==="published")&&!old.verified_information.trim())return err("verified_information_required",409);
+ await env.DB.prepare("UPDATE product_ai_knowledge SET approval_status=?,approved_by=CASE WHEN ?='approved' THEN ? ELSE approved_by END,approved_at=CASE WHEN ?='approved' THEN CURRENT_TIMESTAMP ELSE approved_at END,published_at=CASE WHEN ?='published' THEN CURRENT_TIMESTAMP ELSE published_at END,updated_at=CURRENT_TIMESTAMP WHERE product_code=? AND approval_status=?").bind(target,target,actorId,target,target,key,old.approval_status).run();
+ await audit("product_knowledge",key,"approval_transition",{status:old.approval_status},{status:target}).run();
+ return json({product_code:key,approval_status:target});
+ }
+ if(kind==="contents"&&!key&&method==="GET"){
+ const rows=await env.DB.prepare("SELECT c.id,c.page_id,c.facebook_content_id,c.content_type,c.content_name,c.post_message,c.permalink,c.source,c.sync_status,c.status,COALESCE(GROUP_CONCAT(m.product_code), '') AS product_codes FROM facebook_contents c LEFT JOIN facebook_content_products m ON m.content_id=c.id GROUP BY c.id ORDER BY c.id DESC LIMIT 100").all();
+ return json({contents:rows.results});
+ }
+ if(kind==="contents"&&!key&&method==="POST"){
+ const b=await body(),page=String(b.page_id||"").trim(),id=String(b.facebook_content_id||"").trim(),type=b.content_type??"post";
+ if(!/^[0-9]{3,40}$/.test(page)||!/^[0-9_]{3,100}$/.test(id)||!["post","ad","reel","video","photo"].includes(type)||!text(b.content_name??"",300)||!text(b.post_message??"",10000)||!text(b.permalink??"",2000))return err("invalid_content");
+ const existing=await env.DB.prepare("SELECT id FROM facebook_contents WHERE page_id=? AND facebook_content_id=?").bind(page,id).first();
+ if(existing)return err("content_exists",409);
+ const result=await env.DB.prepare("INSERT INTO facebook_contents(page_id,facebook_content_id,content_type,content_name,post_message,permalink,source) VALUES(?,?,?,?,?,?,'manual')").bind(page,id,type,b.content_name??"",b.post_message??"",b.permalink??"").run();
+ await audit("facebook_content",result.meta.last_row_id,"create",null,{page_id:page,facebook_content_id:id}).run();
+ return json({created:true,id:result.meta.last_row_id},201);
+ }
+ if(kind==="contents"&&key&&sub==="products"&&method==="PUT"){
+ const id=Number(key);if(!Number.isSafeInteger(id)||id<1)return err("invalid_content_id");
+ const b=await body(),codes=b.product_codes;
+ if(!Array.isArray(codes)||codes.length>30||new Set(codes).size!==codes.length||codes.some(x=>!code(x)))return err("invalid_product_codes");
+ const content=await env.DB.prepare("SELECT id FROM facebook_contents WHERE id=?").bind(id).first();if(!content)return err("not_found",404);
+ for(const product of codes){const exists=await env.DB.prepare("SELECT product_code FROM products WHERE product_code=?").bind(product).first();if(!exists)return err("unknown_product_"+product,409)}
+ const old=await env.DB.prepare("SELECT product_code FROM facebook_content_products WHERE content_id=?").bind(id).all();
+ // Atomic replacement: never leave partial mappings on failure.
+ const statements=[env.DB.prepare("DELETE FROM facebook_content_products WHERE content_id=?").bind(id),...codes.map((product,i)=>env.DB.prepare("INSERT INTO facebook_content_products(content_id,product_code,is_primary) VALUES(?,?,?)").bind(id,product,i===0?1:0)),env.DB.prepare("UPDATE facebook_contents SET sync_status=?,updated_at=CURRENT_TIMESTAMP WHERE id=?").bind(codes.length?"mapped":"unmapped",id)];
+ await env.DB.batch(statements);
+ await audit("facebook_content",id,"products_mapped",{product_codes:old.results.map(x=>x.product_code)},{product_codes:codes}).run();
+ return json({mapped:true,id,product_codes:codes});
+ }
+ if(kind==="resolve"&&method==="GET"){
+ const id=new URL(req.url).searchParams.get("content_id"),alias=new URL(req.url).searchParams.get("alias_type");
+ if(!id||id.length>100)return err("invalid_content_id");
+ const rows=await env.DB.prepare("SELECT c.facebook_content_id,c.content_type,m.product_code,p.product_name,p.sale_price,p.currency,k.approval_status FROM facebook_contents c LEFT JOIN facebook_content_aliases a ON a.content_id=c.id LEFT JOIN facebook_content_products m ON m.content_id=c.id LEFT JOIN products p ON p.product_code=m.product_code LEFT JOIN product_ai_knowledge k ON k.product_code=m.product_code WHERE (c.facebook_content_id=? OR (a.alias_id=? AND a.alias_type=?)) AND c.status='active' AND p.status='active'").bind(id,id,alias??"").all();
+ return json({matches:rows.results,needs_clarification:rows.results.length!==1});
+ }
+ if(kind==="sync"&&method==="POST"){
+ // No Page access token is installed by default. Fail closed instead of scraping or inventing posts.
+ if(!env.FACEBOOK_PAGE_ACCESS_TOKEN||!env.FACEBOOK_PAGE_ID)return err("facebook_sync_not_configured",503);
+ const page=String(env.FACEBOOK_PAGE_ID);if(!/^[0-9]{3,40}$/.test(page))return err("invalid_page_configuration",503);
+ const url=new URL("https://graph.facebook.com/v23.0/"+page+"/posts");url.searchParams.set("fields","id,message,permalink_url,created_time");url.searchParams.set("limit","50");
+ const response=await fetch(url,{headers:{authorization:"Bearer "+env.FACEBOOK_PAGE_ACCESS_TOKEN},signal:AbortSignal.timeout(12000)});
+ if(!response.ok)return err("facebook_sync_upstream_error",502);
+ const result=await response.json();if(!Array.isArray(result.data))return err("invalid_facebook_response",502);
+ let imported=0,updated=0;
+ for(const post of result.data){
+ if(!/^[0-9_]{3,100}$/.test(post.id||""))continue;
+ const exists=await env.DB.prepare("SELECT id FROM facebook_contents WHERE page_id=? AND facebook_content_id=?").bind(page,post.id).first();
+ await env.DB.prepare("INSERT INTO facebook_contents(page_id,facebook_content_id,content_type,post_message,permalink,source) VALUES(?,?,'post',?,?,'api') ON CONFLICT(page_id,facebook_content_id) DO UPDATE SET post_message=excluded.post_message,permalink=excluded.permalink,updated_at=CURRENT_TIMESTAMP").bind(page,post.id,String(post.message||"").slice(0,10000),String(post.permalink_url||"").slice(0,2000)).run();
+ if(exists)updated++;else imported++;
+ }
+ await audit("facebook_sync",page,"sync",null,{imported,updated}).run();
+ return json({synced:true,imported,updated,has_more:!!result.paging?.next});
+ }
+ return err("not_found",404);
+ }catch(e){return err(e instanceof SyntaxError||e.message==="invalid_json"?"invalid_json":"intelligence_request_failed",e instanceof SyntaxError||e.message==="invalid_json"?400:500)}
+}
