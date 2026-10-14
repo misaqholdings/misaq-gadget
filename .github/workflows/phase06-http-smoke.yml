@@ -1,4 +1,5 @@
 name: Phase 06 Staging HTTP Smoke
+# Staging only; no real customer data or conversion dispatch
 on:
   workflow_dispatch:
   push:
