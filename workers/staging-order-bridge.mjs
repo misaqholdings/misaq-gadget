@@ -34,7 +34,7 @@ export default {
     try {
       upstream = await fetch(env.ORDER_UPSTREAM_URL,{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+env.ORDER_INTEGRATION_TOKEN,"x-order-source":"website"},body:JSON.stringify(payload)});
     } catch (_) { return new Response('{"error":"upstream_unavailable"}',{status:503,headers}); }
-    if (!upstream.ok) return new Response('{"error":"upstream_rejected"}',{status:upstream.status,headers});
+    if (!upstream.ok) return new Response(JSON.stringify({error:"upstream_rejected",retryable:upstream.status>=500}),{status:upstream.status,headers});
     return new Response(JSON.stringify({ok:true,order_id:body.order_id}),{status:200,headers});
   }
 };
