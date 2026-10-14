@@ -14,8 +14,8 @@ test("rejects invalid product and customer without network",async()=>{const x=aw
 test("rejects missing secret configuration",async()=>{const x=await worker.fetch(req(),{});assert.equal(x.status,503);});
 test("verifies challenge and forwards server-only credentials",async()=>{
  const original=global.fetch;const calls=[];
- global.fetch=async(url,init)=>{calls.push({url,init});return String(url).includes("turnstile")?new Response(JSON.stringify({success:true}),{status:200}):new Response(JSON.stringify({order:{order_id:order.order_id}}),{status:200});};
- try {const x=await worker.fetch(req(),env);assert.equal(x.status,200);assert.equal((await x.json()).order_id,order.order_id);assert.equal(calls.length,2);assert.equal(calls[1].init.headers.Authorization,"Bearer test-secret");assert.equal(JSON.parse(calls[1].init.body).idempotency_key,order.order_id);}finally{global.fetch=original;}
+ global.fetch=async(url,init)=>{calls.push({url,init});return String(url).includes("turnstile")?new Response(JSON.stringify({success:true,hostname:"gadget.misaqholdings.com"}),{status:200}):new Response(JSON.stringify({order:{order_id:order.order_id}}),{status:200});};
+ try {const x=await worker.fetch(req(),env);assert.equal(x.status,200);assert.equal((await x.json()).order_id,order.order_id);assert.equal(calls.length,2);assert.equal(calls[1].init.headers["x-staging-test-token"],"test-secret");assert.equal(JSON.parse(calls[1].init.body).idempotency_key,order.order_id);}finally{global.fetch=original;}
 });
 test("rejects failed challenge without forwarding order",async()=>{
  const original=global.fetch;let calls=0;
@@ -24,6 +24,8 @@ test("rejects failed challenge without forwarding order",async()=>{
 });
 test("marks transient upstream failures retryable",async()=>{
  const original=global.fetch;
- global.fetch=async(url)=>String(url).includes("turnstile")?new Response(JSON.stringify({success:true}),{status:200}):new Response(JSON.stringify({error:"down"}),{status:503});
+ global.fetch=async(url)=>String(url).includes("turnstile")?new Response(JSON.stringify({success:true,hostname:"gadget.misaqholdings.com"}),{status:200}):new Response(JSON.stringify({error:"down"}),{status:503});
  try {const x=await worker.fetch(req(),env);assert.equal(x.status,503);assert.equal((await x.json()).retryable,true);}finally{global.fetch=original;}
 });
+
+test("rejects successful challenge from different hostname",async()=>{const original=global.fetch;let calls=0;global.fetch=async()=>{calls++;return new Response(JSON.stringify({success:true,hostname:"evil.example"}),{status:200});};try{const x=await worker.fetch(req(),env);assert.equal(x.status,403);assert.equal(calls,1);}finally{global.fetch=original;}});
