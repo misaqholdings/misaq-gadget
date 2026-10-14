@@ -38,3 +38,7 @@ jobs:
           echo "Invalid Turnstile status: $code"
           test "$code" = 403
           grep -q verification_failed /tmp/bridge-turnstile
+          upstream='https://misaq-sales-bot-staging.misaqholdings.workers.dev/api/v1/orders'
+          code=$(curl --retry 2 --connect-timeout 10 --max-time 25 -sS -o /tmp/upstream-get -w '%{http_code}' "$upstream")
+          echo "Upstream unauthenticated GET status: $code"
+          test "$code" = 401
