@@ -23,6 +23,7 @@ jobs:
           node --check workers/phase07-product-validation.mjs
           node --check workers/phase07-catalog-api.mjs
           node --check workers/phase07-ai-facebook-api.mjs
+          node --check workers/phase07-comment-webhook.mjs
       - name: Attribution and event identity tests
         run: node --test tests/meta-attribution.test.cjs tests/staging-order-bridge.test.cjs tests/phase06-meta-dispatcher.test.mjs
       - name: Live staging bridge HTTP negative tests
@@ -62,3 +63,5 @@ jobs:
             echo "$path: $code"
             test "$code" = 200
           done
+          code=$(curl --retry 2 --connect-timeout 10 --max-time 25 -sS -o /tmp/p07feed -w '%{http_code}' -X POST -H 'Content-Type: application/json' --data '{"object":"page","entry":[]}' "$BASE/api/v1/facebook/feed-webhook")
+          test "$code" = 403
