@@ -64,4 +64,5 @@ jobs:
             test "$code" = 200
           done
           code=$(curl --retry 2 --connect-timeout 10 --max-time 25 -sS -o /tmp/p07feed -w '%{http_code}' -X POST -H 'Content-Type: application/json' --data '{"object":"page","entry":[]}' "$BASE/api/v1/facebook/feed-webhook")
+          echo "Unauthenticated feed webhook status: $code"
           test "$code" = 403
