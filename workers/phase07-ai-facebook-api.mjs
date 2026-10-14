@@ -72,6 +72,17 @@ async function phase07Intelligence(req,env,p,role,staff,actorId){
  await audit("facebook_content",id,"products_mapped",{product_codes:old.results.map(x=>x.product_code)},{product_codes:codes}).run();
  return json({mapped:true,id,product_codes:codes});
  }
+ if(kind==="contents"&&key&&sub==="aliases"&&method==="POST"){
+ const id=Number(key);if(!Number.isSafeInteger(id)||id<1)return err("invalid_content_id");
+ const b=await body(),type=b.alias_type,alias=String(b.alias_id||"").trim();
+ if(!["ad","creative","post","boosted_post"].includes(type)||!/^[0-9_]{3,100}$/.test(alias))return err("invalid_alias");
+ const found=await env.DB.prepare("SELECT id FROM facebook_contents WHERE id=?").bind(id).first();if(!found)return err("not_found",404);
+ const old=await env.DB.prepare("SELECT content_id FROM facebook_content_aliases WHERE alias_type=? AND alias_id=?").bind(type,alias).first();
+ if(old&&old.content_id!==id)return err("alias_already_mapped_to_other_content",409);
+ await env.DB.prepare("INSERT OR IGNORE INTO facebook_content_aliases(alias_type,alias_id,content_id) VALUES(?,?,?)").bind(type,alias,id).run();
+ await audit("facebook_content",id,"alias_mapped",null,{alias_type:type,alias_id:alias}).run();
+ return json({mapped:true,content_id:id,alias_type:type,alias_id:alias});
+ }
  if(kind==="resolve"&&method==="GET"){
  const id=new URL(req.url).searchParams.get("content_id"),alias=new URL(req.url).searchParams.get("alias_type");
  if(!id||id.length>100)return err("invalid_content_id");
