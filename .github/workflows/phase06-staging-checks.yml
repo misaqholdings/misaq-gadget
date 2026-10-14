@@ -21,3 +21,16 @@ jobs:
           node --check workers/staging-order-bridge.mjs
       - name: Attribution and event identity tests
         run: node --test tests/meta-attribution.test.cjs tests/staging-order-bridge.test.cjs
+      - name: Live staging bridge HTTP negative tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          URL='https://misaq-order-bridge-staging.misaqholdings.workers.dev/v1/website/orders'
+          code=$(curl --retry 2 --connect-timeout 10 --max-time 25 -sS -o /tmp/bridge-get -w '%{http_code}' "$URL")
+          echo "Unauthenticated GET status: $code"
+          test "$code" = 403
+          grep -q origin_not_allowed /tmp/bridge-get
+          code=$(curl --retry 2 --connect-timeout 10 --max-time 25 -sS -o /tmp/bridge-post -w '%{http_code}' -X POST -H 'Origin: https://gadget.misaqholdings.com' -H 'Content-Type: application/json' --data '{"product_code":"INVALID","order_id":"smoke_invalid_12345678","quantity":1,"customer_name":"Staging QA","phone":"01712345678","address":"Test address Dhaka"}' "$URL")
+          echo "Invalid POST status: $code"
+          test "$code" = 400
+          grep -q invalid_order /tmp/bridge-post
