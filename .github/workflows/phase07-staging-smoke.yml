@@ -1,0 +1,26 @@
+name: Phase 07 Staging Product Dashboard Smoke
+on:
+  push:
+    branches: [dev/phase06-centralized-capi]
+  workflow_dispatch:
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Staging product management security and UI
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE='https://misaq-sales-bot-staging.misaqholdings.workers.dev'
+          for path in '/api/v1/catalog/products' '/api/v1/catalog/products/STAGING_TEST_Q86' '/api/v1/catalog/products/STAGING_TEST_Q86/variants'; do
+            code=$(curl --retry 2 --connect-timeout 10 --max-time 25 -sS -o /tmp/catalog-response -w '%{http_code}' "$BASE$path")
+            echo "$path unauthenticated: $code"
+            test "$code" = 401
+          done
+          code=$(curl --retry 2 --connect-timeout 10 --max-time 25 -sS -o /tmp/catalog-post -w '%{http_code}' -X POST -H 'Content-Type: application/json' --data '{"product_code":"UNAUTHORIZED_TEST","product_name":"Should Never Create","sale_price":10}' "$BASE/api/v1/catalog/products")
+          test "$code" = 401
+          code=$(curl --retry 2 --connect-timeout 10 --max-time 25 -sS -o /tmp/product-ui -w '%{http_code}' "$BASE/product-admin")
+          test "$code" = 200
+          grep -q 'MISAQ Product Management' /tmp/product-ui
+          grep -q 'Create Variant' /tmp/product-ui
+          echo 'Phase 07 security and dashboard smoke PASS'
