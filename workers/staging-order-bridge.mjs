@@ -34,7 +34,7 @@ export default {
     const payload = {source:"website",product_code:mappedCode,idempotency_key:body.order_id,quantity:body.quantity,customer_name:body.customer_name,phone:body.phone,address:body.address,acquisition:body.acquisition || "unknown",fbp:body.fbp || null,fbc:body.fbc || null,marketing_consent:body.marketing_consent === true};
     let upstream;
     try {
-      upstream = await fetch(env.ORDER_UPSTREAM_URL,{method:"POST",headers:{"Content-Type":"application/json","x-staging-test-token":env.ORDER_INTEGRATION_TOKEN,"x-order-source":"website"},body:JSON.stringify(payload)});
+      upstream = await (env.STAGING_UPSTREAM ? env.STAGING_UPSTREAM.fetch.bind(env.STAGING_UPSTREAM) : fetch)(env.ORDER_UPSTREAM_URL,{method:"POST",headers:{"Content-Type":"application/json","x-staging-test-token":env.ORDER_INTEGRATION_TOKEN,"x-order-source":"website"},body:JSON.stringify(payload)});
     } catch (_) { return new Response('{"error":"upstream_unavailable"}',{status:503,headers}); }
     if (!upstream.ok) {let detail="non_json",kind="other";const ct=upstream.headers.get("content-type")||"";kind=ct.includes("application/json")?"json":ct.includes("text/html")?"html":"other";if(kind==="json"){try{const info=await upstream.json();if(typeof info.error==="string" && /^[a-zA-Z0-9 _-]{1,80}$/.test(info.error))detail=info.error;}catch(_){detail="invalid_json";}}return new Response(JSON.stringify({error:"upstream_rejected",upstream_status:upstream.status,upstream_error:detail,upstream_type:kind,retryable:upstream.status>=500}),{status:upstream.status,headers});}
     return new Response(JSON.stringify({ok:true,order_id:body.order_id}),{status:200,headers});
