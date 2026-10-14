@@ -26,13 +26,15 @@ export default {
     let verified = false;
     try {
       const result = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify",{method:"POST",body:challenge});
-      verified = result.ok && (await result.json()).success === true;
+      const verdict = result.ok ? await result.json() : null;
+      verified = verdict?.success === true && verdict.hostname === "gadget.misaqholdings.com";
     } catch (_) {}
     if (!verified) return new Response('{"error":"verification_failed"}',{status:403,headers});
-    const payload = {source:"website",product_code:body.product_code,idempotency_key:body.order_id,quantity:body.quantity,customer_name:body.customer_name,phone:body.phone,address:body.address,acquisition:body.acquisition || "unknown",fbp:body.fbp || null,fbc:body.fbc || null,marketing_consent:body.marketing_consent === true};
+    const mappedCode = env.STAGING_Q86_TEST_MAPPING === "enabled" && body.product_code === "Q86" ? "STAGING_TEST_Q86" : body.product_code;
+    const payload = {source:"website",product_code:mappedCode,idempotency_key:body.order_id,quantity:body.quantity,customer_name:body.customer_name,phone:body.phone,address:body.address,acquisition:body.acquisition || "unknown",fbp:body.fbp || null,fbc:body.fbc || null,marketing_consent:body.marketing_consent === true};
     let upstream;
     try {
-      upstream = await fetch(env.ORDER_UPSTREAM_URL,{method:"POST",headers:{"Content-Type":"application/json","Authorization":"Bearer "+env.ORDER_INTEGRATION_TOKEN,"x-order-source":"website"},body:JSON.stringify(payload)});
+      upstream = await fetch(env.ORDER_UPSTREAM_URL,{method:"POST",headers:{"Content-Type":"application/json","x-staging-test-token":env.ORDER_INTEGRATION_TOKEN,"x-order-source":"website"},body:JSON.stringify(payload)});
     } catch (_) { return new Response('{"error":"upstream_unavailable"}',{status:503,headers}); }
     if (!upstream.ok) return new Response(JSON.stringify({error:"upstream_rejected",retryable:upstream.status>=500}),{status:upstream.status,headers});
     return new Response(JSON.stringify({ok:true,order_id:body.order_id}),{status:200,headers});
