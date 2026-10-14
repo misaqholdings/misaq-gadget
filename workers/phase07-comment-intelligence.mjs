@@ -34,5 +34,5 @@ export function decideCommentReply({event, mappedProductCodes, publishedKnowledg
     else return {action:"human_review",reason:"payment_unverified",product_code:code};
   }
   if (!Object.keys(fields).length) return {action:"human_review",reason:"unrecognized_intent",product_code:code};
-  return {action:"draft_reply",reason:"verified_fact",product_code:code,text:Object.values(fields).join(" ")+" অর্ডার করতে: https://gadget.misaqholdings.com/q86-earbuds/",requires_human_approval:true};
+  return {action:"draft_reply",reason:"verified_fact",product_code:code,text:Object.values(fields).join(" ")+(k.product_url ? " বিস্তারিত: "+k.product_url : ""),requires_human_approval:true};
 }
