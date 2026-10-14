@@ -22,6 +22,7 @@ jobs:
           node --check workers/phase06-staging-meta-dispatcher.mjs
           node --check workers/phase07-product-validation.mjs
           node --check workers/phase07-catalog-api.mjs
+          node --check workers/phase07-ai-facebook-api.mjs
       - name: Attribution and event identity tests
         run: node --test tests/meta-attribution.test.cjs tests/staging-order-bridge.test.cjs tests/phase06-meta-dispatcher.test.mjs
       - name: Live staging bridge HTTP negative tests
@@ -45,3 +46,19 @@ jobs:
           code=$(curl --retry 2 --connect-timeout 10 --max-time 25 -sS -o /tmp/upstream-get -w '%{http_code}' "$upstream")
           echo "Upstream unauthenticated GET status: $code"
           test "$code" = 401
+
+      - name: Phase 07 staging authorization and UI smoke
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE='https://misaq-sales-bot-staging.misaqholdings.workers.dev'
+          for path in '/api/v1/catalog/products' '/api/v1/intelligence/contents' '/api/v1/intelligence/knowledge/STAGING_TEST_Q86' '/api/v1/intelligence/resolve?content_id=123456'; do
+            code=$(curl --retry 2 --connect-timeout 10 --max-time 25 -sS -o /tmp/p07api -w '%{http_code}' "$BASE$path")
+            echo "$path: $code"
+            test "$code" = 401
+          done
+          for path in '/product-admin' '/ai-knowledge-admin'; do
+            code=$(curl --retry 2 --connect-timeout 10 --max-time 25 -sS -o /tmp/p07ui -w '%{http_code}' "$BASE$path")
+            echo "$path: $code"
+            test "$code" = 200
+          done
