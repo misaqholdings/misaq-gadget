@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="bn">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow,noarchive">
+<title>MISAQ Gadget — Isolated Staging Order QA</title>
+<style>body{font:16px system-ui,sans-serif;max-width:650px;margin:48px auto;padding:0 18px;line-height:1.55}button{padding:12px 20px;cursor:pointer}pre{white-space:pre-wrap;word-break:break-word;background:#f3f4f6;padding:14px;border-radius:8px}small{color:#555}</style>
+<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
+</head>
+<body>
+<h1>MISAQ Gadget — Staging QA Only</h1>
+<p><strong>Only synthetic test data.</strong> This page does not use the live Google Apps Script, create real customer orders, or fire browser Meta events. Do not enter customer information.</p>
+<p>Complete the Cloudflare verification, then click the test button once. The order goes only to the separate staging bridge and uses the test SKU mapping.</p>
+<div class="cf-turnstile" data-sitekey="0x4AAAAAAFWRHIYDPnA9F-P4" data-callback="turnstileReady"></div>
+<p><button id="send" disabled>Send one synthetic staging order</button></p>
+<small>Q86 / STAGING_TEST_Q86 · Quantity 1 · synthetic phone 01700000000 · No marketing consent · No Meta production conversion.</small>
+<pre id="result" aria-live="polite">Waiting for Turnstile verification.</pre>
+<script>
+(function(){
+"use strict";
+const endpoint="https://misaq-order-bridge-staging.misaqholdings.workers.dev/v1/website/orders";
+const button=document.getElementById("send");
+const output=document.getElementById("result");
+let challenge=null;
+window.turnstileReady=function(token){challenge=token;button.disabled=false;output.textContent="Verification ready. Click once to submit synthetic order."};
+button.addEventListener("click",async()=>{
+ if(!challenge)return;
+ button.disabled=true;
+ const orderId="qa_p06_"+crypto.randomUUID().replaceAll("-","").slice(0,24);
+ const payload={product_code:"Q86",order_id:orderId,quantity:1,customer_name:"MISAQ Staging QA",phone:"01700000000",address:"Staging synthetic address Dhaka Bangladesh",marketing_consent:false,turnstile_token:challenge};
+ output.textContent="Sending synthetic order "+orderId+"…";
+ try{
+   const response=await fetch(endpoint,{method:"POST",mode:"cors",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)});
+   const data=await response.json().catch(()=>({error:"invalid_json_response"}));
+   output.textContent=JSON.stringify({http_status:response.status,order_id:orderId,response:data},null,2);
+ }catch(e){output.textContent=JSON.stringify({order_id:orderId,error:"network_or_cors_failure"},null,2)}
+ finally{challenge=null;if(window.turnstile)window.turnstile.reset();}
+});
+})();
+</script>
+</body>
+</html>
