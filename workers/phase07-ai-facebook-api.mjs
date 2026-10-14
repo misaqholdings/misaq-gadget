@@ -101,18 +101,23 @@ async function phase07Intelligence(req,env,p,role,staff,actorId){
  if(!env.FACEBOOK_PAGE_ACCESS_TOKEN||!env.FACEBOOK_PAGE_ID)return err("facebook_sync_not_configured",503);
  const page=String(env.FACEBOOK_PAGE_ID);if(!/^[0-9]{3,40}$/.test(page))return err("invalid_page_configuration",503);
  const url=new URL("https://graph.facebook.com/v23.0/"+page+"/posts");url.searchParams.set("fields","id,message,permalink_url,created_time");url.searchParams.set("limit","50");
- const response=await fetch(url,{headers:{authorization:"Bearer "+env.FACEBOOK_PAGE_ACCESS_TOKEN},signal:AbortSignal.timeout(12000)});
- if(!response.ok)return err("facebook_sync_upstream_error",502);
- const result=await response.json();if(!Array.isArray(result.data))return err("invalid_facebook_response",502);
- let imported=0,updated=0;
- for(const post of result.data){
- if(!/^[0-9_]{3,100}$/.test(post.id||""))continue;
- const exists=await env.DB.prepare("SELECT id FROM facebook_contents WHERE page_id=? AND facebook_content_id=?").bind(page,post.id).first();
- await env.DB.prepare("INSERT INTO facebook_contents(page_id,facebook_content_id,content_type,post_message,permalink,source) VALUES(?,?,'post',?,?,'api') ON CONFLICT(page_id,facebook_content_id) DO UPDATE SET post_message=excluded.post_message,permalink=excluded.permalink,updated_at=CURRENT_TIMESTAMP").bind(page,post.id,String(post.message||"").slice(0,10000),String(post.permalink_url||"").slice(0,2000)).run();
- if(exists)updated++;else imported++;
+ let imported=0,updated=0,pages=0,next=url.toString();
+ while(next&&pages<10){
+  const parsed=new URL(next);
+  if(parsed.origin!=="https://graph.facebook.com")return err("unsafe_pagination_url",502);
+  const response=await fetch(parsed.toString(),{headers:{authorization:"Bearer "+env.FACEBOOK_PAGE_ACCESS_TOKEN},signal:AbortSignal.timeout(12000)});
+  if(!response.ok)return err("facebook_sync_upstream_error",502);
+  const result=await response.json();if(!Array.isArray(result.data))return err("invalid_facebook_response",502);
+  for(const post of result.data){
+   if(!/^[0-9_]{3,100}$/.test(post.id||""))continue;
+   const exists=await env.DB.prepare("SELECT id FROM facebook_contents WHERE page_id=? AND facebook_content_id=?").bind(page,post.id).first();
+   await env.DB.prepare("INSERT INTO facebook_contents(page_id,facebook_content_id,content_type,post_message,permalink,source) VALUES(?,?,'post',?,?,'api') ON CONFLICT(page_id,facebook_content_id) DO UPDATE SET post_message=excluded.post_message,permalink=excluded.permalink,updated_at=CURRENT_TIMESTAMP").bind(page,post.id,String(post.message||"").slice(0,10000),String(post.permalink_url||"").slice(0,2000)).run();
+   if(exists)updated++;else imported++;
+  }
+  next=result.paging?.next||null;pages++;
  }
  await audit("facebook_sync",page,"sync",null,{imported,updated}).run();
- return json({synced:true,imported,updated,has_more:!!result.paging?.next});
+ return json({synced:true,imported,updated,pages,has_more:!!next});
  }
  return err("not_found",404);
  }catch(e){return err(e instanceof SyntaxError||e.message==="invalid_json"?"invalid_json":"intelligence_request_failed",e instanceof SyntaxError||e.message==="invalid_json"?400:500)}
