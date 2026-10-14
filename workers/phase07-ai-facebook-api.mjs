@@ -1,3 +1,42 @@
+// Phase 07 automatic content-to-existing-product matching.
+// Conservative deterministic identification; never creates products or overwrites admin mapping.
+function identifyProducts(post, products) {
+ const raw=[post.message,post.name,post.description].filter(x=>typeof x==="string").join(" ").toLowerCase();
+ const matches=[];
+ for(const p of products){
+  const code=String(p.product_code||"").toLowerCase();
+  const name=String(p.product_name||"").toLowerCase().trim();
+  const short=String(p.short_name||"").toLowerCase().trim();
+  const terms=[code,name,short].filter(x=>x.length>=3);
+  const matched=terms.some(term=>{
+   const escaped=term.replace(/[.*+?^${}()|[\]\\]/g,"\\$&");
+   return new RegExp("(^|[^\\p{L}\\p{N}])"+escaped+"(?=$|[^\\p{L}\\p{N}])","iu").test(raw);
+  });
+  if(matched)matches.push(p.product_code);
+ }
+ return [...new Set(matches)];
+}
+async function syncContent(db,pageId,posts) {
+ const products=(await db.prepare("SELECT product_code,product_name,short_name FROM products WHERE status='active'").all()).results;
+ const stats={created:0,updated:0,auto_mapped:0,needs_review:0};
+ for(const post of posts){
+  const id=String(post.id||"");
+  if(!/^[0-9_]{3,100}$/.test(id))continue;
+  const existing=await db.prepare("SELECT id,sync_status FROM facebook_contents WHERE page_id=? AND facebook_content_id=?").bind(pageId,id).first();
+  await db.prepare("INSERT INTO facebook_contents(page_id,facebook_content_id,content_type,post_message,permalink,source) VALUES(?,?,'post',?,?,'api') ON CONFLICT(page_id,facebook_content_id) DO UPDATE SET post_message=excluded.post_message,permalink=excluded.permalink,updated_at=CURRENT_TIMESTAMP").bind(pageId,id,String(post.message||"").slice(0,10000),String(post.permalink_url||"").slice(0,2000)).run();
+  if(existing)stats.updated++;else stats.created++;
+  // Never replace reviewed/manual mappings or existing product links.
+  const content=await db.prepare("SELECT id,sync_status FROM facebook_contents WHERE page_id=? AND facebook_content_id=?").bind(pageId,id).first();
+  const current=await db.prepare("SELECT COUNT(*) AS n FROM facebook_content_products WHERE content_id=?").bind(content.id).first();
+  if(current.n>0||content.sync_status==="mapped")continue;
+  const codes=identifyProducts(post,products);
+  if(codes.length===0){stats.needs_review++;continue}
+  await db.batch([...codes.map((code,i)=>db.prepare("INSERT OR IGNORE INTO facebook_content_products(content_id,product_code,is_primary) VALUES(?,?,?)").bind(content.id,code,i===0?1:0)),db.prepare("UPDATE facebook_contents SET sync_status='mapped',updated_at=CURRENT_TIMESTAMP WHERE id=? AND sync_status='unmapped'").bind(content.id)]);
+  stats.auto_mapped+=codes.length;
+ }
+ return stats;
+}
+
 // Phase 07: staging-only AI knowledge and organic/paid Facebook content management.
 async function phase07Intelligence(req,env,p,role,staff,actorId){
  const json=(v,s=200)=>new Response(JSON.stringify(v),{status:s,headers:{"content-type":"application/json","cache-control":"no-store"}});
@@ -105,23 +144,19 @@ async function phase07Intelligence(req,env,p,role,staff,actorId){
  if(!env.FACEBOOK_PAGE_ACCESS_TOKEN||!env.FACEBOOK_PAGE_ID)return err("facebook_sync_not_configured",503);
  const page=String(env.FACEBOOK_PAGE_ID);if(!/^[0-9]{3,40}$/.test(page))return err("invalid_page_configuration",503);
  const url=new URL("https://graph.facebook.com/v23.0/"+page+"/posts");url.searchParams.set("fields","id,message,permalink_url,created_time");url.searchParams.set("limit","50");
- let imported=0,updated=0,pages=0,next=url.toString();
+ let imported=0,updated=0,auto_mapped=0,needs_review=0,pages=0,next=url.toString();
  while(next&&pages<10){
   const parsed=new URL(next);
   if(parsed.origin!=="https://graph.facebook.com")return err("unsafe_pagination_url",502);
   const response=await fetch(parsed.toString(),{headers:{authorization:"Bearer "+env.FACEBOOK_PAGE_ACCESS_TOKEN},signal:AbortSignal.timeout(12000)});
   if(!response.ok)return err("facebook_sync_upstream_error",502);
   const result=await response.json();if(!Array.isArray(result.data))return err("invalid_facebook_response",502);
-  for(const post of result.data){
-   if(!/^[0-9_]{3,100}$/.test(post.id||""))continue;
-   const exists=await env.DB.prepare("SELECT id FROM facebook_contents WHERE page_id=? AND facebook_content_id=?").bind(page,post.id).first();
-   await env.DB.prepare("INSERT INTO facebook_contents(page_id,facebook_content_id,content_type,post_message,permalink,source) VALUES(?,?,'post',?,?,'api') ON CONFLICT(page_id,facebook_content_id) DO UPDATE SET post_message=excluded.post_message,permalink=excluded.permalink,updated_at=CURRENT_TIMESTAMP").bind(page,post.id,String(post.message||"").slice(0,10000),String(post.permalink_url||"").slice(0,2000)).run();
-   if(exists)updated++;else imported++;
-  }
+  const stats=await syncContent(env.DB,page,result.data);
+  imported+=stats.created;updated+=stats.updated;auto_mapped+=stats.auto_mapped;needs_review+=stats.needs_review;
   next=result.paging?.next||null;pages++;
  }
  await audit("facebook_sync",page,"sync",null,{imported,updated}).run();
- return json({synced:true,imported,updated,pages,has_more:!!next});
+ return json({synced:true,imported,updated,auto_mapped,needs_review,pages,has_more:!!next});
  }
  return err("not_found",404);
  }catch(e){return err(e instanceof SyntaxError||e.message==="invalid_json"?"invalid_json":"intelligence_request_failed",e instanceof SyntaxError||e.message==="invalid_json"?400:500)}
