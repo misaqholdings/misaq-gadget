@@ -161,7 +161,7 @@ async function phase07Intelligence(req,env,p,role,staff,actorId){
  if(kind==="resolve"&&method==="GET"){
  const id=new URL(req.url).searchParams.get("content_id"),alias=new URL(req.url).searchParams.get("alias_type");
  if(!id||id.length>100)return err("invalid_content_id");
- const rows=await env.DB.prepare("SELECT c.facebook_content_id,c.content_type,m.product_code,p.product_name,p.sale_price,p.currency,k.approval_status FROM facebook_contents c LEFT JOIN facebook_content_aliases a ON a.content_id=c.id LEFT JOIN facebook_content_products m ON m.content_id=c.id LEFT JOIN products p ON p.product_code=m.product_code LEFT JOIN product_ai_knowledge k ON k.product_code=m.product_code WHERE (c.facebook_content_id=? OR (a.alias_id=? AND a.alias_type=?)) AND c.status='active' AND p.status='active'").bind(id,id,alias??"").all();
+ const rows=await env.DB.prepare("SELECT c.facebook_content_id,c.content_type,m.product_code,p.product_name,p.sale_price,p.currency,k.approval_status FROM facebook_contents c LEFT JOIN facebook_content_aliases a ON a.content_id=c.id LEFT JOIN facebook_content_products m ON m.content_id=c.id LEFT JOIN products p ON p.product_code=m.product_code LEFT JOIN product_ai_knowledge k ON k.product_code=m.product_code WHERE (c.facebook_content_id=? OR (a.alias_id=? AND a.alias_type=?)) AND c.status='active' AND p.status='active' AND k.approval_status='published'").bind(id,id,alias??"").all();
  return json({matches:rows.results,needs_clarification:rows.results.length!==1});
  }
  if(kind==="sync"&&method==="POST"){
