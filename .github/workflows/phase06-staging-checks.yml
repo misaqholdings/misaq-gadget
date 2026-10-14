@@ -1,0 +1,23 @@
+name: Phase 06 Staging Code Checks
+on:
+  push:
+    branches: [dev/phase06-centralized-capi]
+  pull_request:
+    branches: [main]
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: JavaScript syntax
+        run: |
+          node --check js/order.js
+          node --check js/meta-attribution.js
+          node --check workers/staging-order-bridge.mjs
+      - name: Attribution and event identity tests
+        run: node --test tests/meta-attribution.test.cjs
