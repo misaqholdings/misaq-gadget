@@ -29,3 +29,14 @@ test("marks transient upstream failures retryable",async()=>{
 });
 
 test("rejects successful challenge from different hostname",async()=>{const original=global.fetch;let calls=0;global.fetch=async()=>{calls++;return new Response(JSON.stringify({success:true,hostname:"evil.example"}),{status:200});};try{const x=await worker.fetch(req(),env);assert.equal(x.status,403);assert.equal(calls,1);}finally{global.fetch=original;}});
+
+test("maps Q86 to staging catalog only with explicit feature flag",async()=>{
+ const original=global.fetch;let upstreamCode;
+ global.fetch=async(url,init)=>{if(String(url).includes("turnstile"))return new Response(JSON.stringify({success:true,hostname:"gadget.misaqholdings.com"}),{status:200});upstreamCode=JSON.parse(init.body).product_code;return new Response("{}",{status:200});};
+ try {const x=await worker.fetch(req(),{...env,STAGING_Q86_TEST_MAPPING:"enabled"});assert.equal(x.status,200);assert.equal(upstreamCode,"STAGING_TEST_Q86");}finally{global.fetch=original;}
+});
+test("keeps original product SKU when mapping is disabled",async()=>{
+ const original=global.fetch;let upstreamCode;
+ global.fetch=async(url,init)=>{if(String(url).includes("turnstile"))return new Response(JSON.stringify({success:true,hostname:"gadget.misaqholdings.com"}),{status:200});upstreamCode=JSON.parse(init.body).product_code;return new Response("{}",{status:200});};
+ try {const x=await worker.fetch(req(),env);assert.equal(x.status,200);assert.equal(upstreamCode,"Q86");}finally{global.fetch=original;}
+});
