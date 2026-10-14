@@ -9,7 +9,7 @@ export default {
     if (allowed) headers["Access-Control-Allow-Origin"] = origin;
     if (!allowed) return new Response('{"error":"origin_not_allowed"}',{status:403,headers});
     if (request.method === "OPTIONS") return new Response(null,{status:204,headers:{...headers,"Access-Control-Allow-Methods":"POST, OPTIONS","Access-Control-Allow-Headers":"Content-Type"}});
-    if (request.method !== "POST") return new Response('{"error":"method_not_allowed"}',{status:405,headers});
+    if (new URL(request.url).pathname !== "/v1/website/orders") return new Response('{"error":"not_found"}',{status:404,headers});\n    if (request.method !== "POST") return new Response('{"error":"method_not_allowed"}',{status:405,headers});
     if (!env.ORDER_UPSTREAM_URL || !env.ORDER_INTEGRATION_TOKEN || !env.TURNSTILE_SECRET) return new Response('{"error":"not_configured"}',{status:503,headers});
     let body;
     try {
