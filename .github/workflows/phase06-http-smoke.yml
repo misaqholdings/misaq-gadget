@@ -1,0 +1,37 @@
+name: Phase 06 Staging HTTP Smoke
+on:
+  workflow_dispatch:
+  push:
+    branches: [dev/phase06-centralized-capi]
+    paths:
+      - '.github/workflows/phase06-http-smoke.yml'
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check public bridge rejects unauthenticated browser navigation
+        shell: bash
+        run: |
+          set -euo pipefail
+          URL='https://misaq-order-bridge-staging.misaqholdings.workers.dev/v1/website/orders'
+          code=$(curl --retry 2 --retry-delay 2 --connect-timeout 10 --max-time 25 -sS -o /tmp/bridge-response -w '%{http_code}' "$URL")
+          echo "GET status: $code"
+          test "$code" = 403
+          grep -q 'origin_not_allowed' /tmp/bridge-response
+      - name: Check allowed origin rejects invalid order without creating one
+        shell: bash
+        run: |
+          set -euo pipefail
+          URL='https://misaq-order-bridge-staging.misaqholdings.workers.dev/v1/website/orders'
+          code=$(curl --retry 2 --retry-delay 2 --connect-timeout 10 --max-time 25 -sS -o /tmp/bridge-invalid -w '%{http_code}' -X POST -H 'Origin: https://gadget.misaqholdings.com' -H 'Content-Type: application/json' --data '{"product_code":"INVALID","order_id":"smoke_invalid_12345678","quantity":1,"customer_name":"Staging QA","phone":"01712345678","address":"Test address Dhaka"}' "$URL")
+          echo "Invalid order status: $code"
+          test "$code" = 400
+          grep -q 'invalid_order' /tmp/bridge-invalid
+      - name: Check preflight does not expose credentials
+        shell: bash
+        run: |
+          set -euo pipefail
+          URL='https://misaq-order-bridge-staging.misaqholdings.workers.dev/v1/website/orders'
+          curl --connect-timeout 10 --max-time 25 -fsS -D /tmp/bridge-headers -o /dev/null -X OPTIONS -H 'Origin: https://gadget.misaqholdings.com' "$URL"
+          grep -qi 'access-control-allow-origin: https://gadget.misaqholdings.com' /tmp/bridge-headers
+          ! grep -qi 'access-control-allow-credentials: true' /tmp/bridge-headers
