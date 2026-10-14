@@ -20,6 +20,8 @@ jobs:
           node --check js/meta-attribution.js
           node --check workers/staging-order-bridge.mjs
           node --check workers/phase06-staging-meta-dispatcher.mjs
+          node --check workers/phase07-product-validation.mjs
+          node --check workers/phase07-catalog-api.mjs
       - name: Attribution and event identity tests
         run: node --test tests/meta-attribution.test.cjs tests/staging-order-bridge.test.cjs tests/phase06-meta-dispatcher.test.mjs
       - name: Live staging bridge HTTP negative tests
