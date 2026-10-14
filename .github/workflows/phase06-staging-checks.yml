@@ -20,4 +20,4 @@ jobs:
           node --check js/meta-attribution.js
           node --check workers/staging-order-bridge.mjs
       - name: Attribution and event identity tests
-        run: node --test tests/meta-attribution.test.cjs
+        run: node --test tests/meta-attribution.test.cjs tests/staging-order-bridge.test.cjs
