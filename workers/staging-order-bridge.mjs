@@ -17,7 +17,7 @@ export default {
       if (raw.length > 8192) return new Response('{"error":"too_large"}',{status:413,headers});
       body = JSON.parse(raw);
     } catch (_) { return new Response('{"error":"invalid_json"}',{status:400,headers}); }
-    if (!["Q86","Q10","AIRFRYER_6L"].includes(body.product_code) || !/^[A-Za-z0-9:_-]{8,128}$/.test(body.order_id || "") || !Number.isInteger(body.quantity) || body.quantity < 1 || body.quantity > 10 || typeof body.customer_name !== "string" || body.customer_name.trim().length < 2 || body.customer_name.length > 150 || typeof body.phone !== "string" || !/^(?:\\+?88)?01[3-9][0-9]{8}$/.test(body.phone.replace(/[\\s-]/g,"")) || typeof body.address !== "string" || body.address.trim().length < 5 || body.address.length > 500)
+    if (!["Q86","Q10","AIRFRYER_6L"].includes(body.product_code) || !/^[A-Za-z0-9:_-]{8,128}$/.test(body.order_id || "") || !Number.isInteger(body.quantity) || body.quantity < 1 || body.quantity > 10 || typeof body.customer_name !== "string" || body.customer_name.trim().length < 2 || body.customer_name.length > 150 || typeof body.phone !== "string" || !/^(?:88)?01[3-9][0-9]{8}$/.test(body.phone.replaceAll(" ","").replaceAll("-","").replaceAll("+","")) || typeof body.address !== "string" || body.address.trim().length < 5 || body.address.length > 500)
       return new Response('{"error":"invalid_order"}',{status:400,headers});
     const challenge = new FormData();
     challenge.set("secret",env.TURNSTILE_SECRET);
