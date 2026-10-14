@@ -117,6 +117,33 @@ async function phase07Intelligence(req,env,p,role,staff,actorId){
  await audit("product_knowledge",key,"approval_transition",{status:old.approval_status},{status:target}).run();
  return json({product_code:key,approval_status:target});
  }
+ if(kind==="comments"&&key==="review"&&method==="GET"){
+  const id=Number(new URL(req.url).searchParams.get("id"));
+  if(!Number.isSafeInteger(id)||id<1)return err("invalid_id");
+  const e=await env.DB.prepare("SELECT * FROM facebook_comment_events WHERE id=?").bind(id).first();
+  if(!e)return err("not_found",404);
+  let codes;try{codes=JSON.parse(e.product_codes_json);if(!Array.isArray(codes))throw Error("invalid")}catch{return err("invalid_product_mapping",409)}
+  codes=[...new Set(codes.filter(x=>typeof x==="string"))];
+  const base={id,public_reply_status:e.public_reply_status,private_reply_status:e.private_reply_status,delivery_status:e.delivery_status};
+  if(codes.length!==1)return json({...base,decision:{action:codes.length?"clarify":"human_review",reason:codes.length?"multiple_products":"unmapped_post",product_codes:codes}});
+  const k=await env.DB.prepare("SELECT p.product_code,p.sale_price,p.currency,p.product_url,k.approval_status,k.payment_methods,k.delivery_policy,k.warranty_policy FROM products p JOIN product_ai_knowledge k ON k.product_code=p.product_code WHERE p.product_code=? AND p.status='active' AND k.approval_status='published'").bind(codes[0]).first();
+  if(!k)return json({...base,decision:{action:"human_review",reason:"knowledge_not_published"}});
+  const m=String(e.comment_text||"").trim();
+  if(!m)return json({...base,decision:{action:"human_review",reason:"empty_comment"}});
+  if(/অর্ডার|রিটার্ন|রিপ্লেস|নষ্ট|খারাপ|ডিফেক্ট|refund|return|replace|broken|defect|tracking|complaint/i.test(m))return json({...base,decision:{action:"human_review",reason:"case_specific"}});
+  if(/ডেলিভারি|delivery|shipping|ঢাকা|dhaka|ওয়ারেন্টি|ওয়ারেন্টি|warranty/i.test(m))return json({...base,decision:{action:"human_review",reason:"policy_needs_context"}});
+  const lines=[];
+  if(/দাম|মূল্য|কত টাকা|price|cost/i.test(m)){
+   if(k.currency!=="BDT"||!Number.isFinite(Number(k.sale_price))||Number(k.sale_price)<=0)return json({...base,decision:{action:"human_review",reason:"price_unverified"}});
+   lines.push("দাম ৳"+Number(k.sale_price).toLocaleString("en-US")+"।");
+  }
+  if(/cod|ক্যাশ অন ডেলিভারি|পেমেন্ট|payment/i.test(m)){
+   if(!String(k.payment_methods||"").includes("Cash on Delivery"))return json({...base,decision:{action:"human_review",reason:"payment_unverified"}});
+   lines.push("ক্যাশ অন ডেলিভারি (COD) সুবিধা রয়েছে।");
+  }
+  if(!lines.length)return json({...base,decision:{action:"human_review",reason:"unrecognized_intent"}});
+  return json({...base,decision:{action:"draft_reply",reason:"verified_fact",product_code:k.product_code,text:lines.join(" ")+(k.product_url?" বিস্তারিত: "+k.product_url:""),requires_human_approval:true}});
+ }
  if(kind==="comments"&&!key&&method==="GET"){
  const rows=await env.DB.prepare("SELECT id,page_id,post_id,comment_id,comment_text,product_codes_json,resolution_status,public_reply_status,private_reply_status,delivery_status,created_at FROM facebook_comment_events ORDER BY id DESC LIMIT 100").all();
  return json({comments:rows.results});
