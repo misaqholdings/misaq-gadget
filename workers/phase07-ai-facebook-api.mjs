@@ -1,3 +1,28 @@
+
+// Reusable background sync. Uses the same logic as admin-triggered sync.
+// Never creates products, never overwrites existing mappings.
+async function phase07ScheduledSync(env){
+ if(!env.DB||!env.FACEBOOK_PAGE_ACCESS_TOKEN||!env.FACEBOOK_PAGE_ID)return {skipped:"not_configured"};
+ const page=String(env.FACEBOOK_PAGE_ID);
+ if(!/^[0-9]{3,40}$/.test(page))return {skipped:"invalid_page_id"};
+ const endpoint=new URL("https://graph.facebook.com/v23.0/"+page+"/posts");
+ endpoint.searchParams.set("fields","id,message,permalink_url,created_time");
+ endpoint.searchParams.set("limit","50");
+ let next=endpoint.toString(),pages=0,created=0,updated=0,auto_mapped=0,needs_review=0;
+ while(next&&pages<10){
+  const u=new URL(next);
+  if(u.origin!=="https://graph.facebook.com"||!u.pathname.startsWith("/v23.0/"))throw Error("unsafe_pagination");
+  const response=await fetch(u,{headers:{authorization:"Bearer "+env.FACEBOOK_PAGE_ACCESS_TOKEN},signal:AbortSignal.timeout(12000)});
+  if(!response.ok)throw Error("facebook_sync_http_"+response.status);
+  const data=await response.json();
+  if(!Array.isArray(data.data))throw Error("invalid_graph_response");
+  const counts=await syncContent(env.DB,page,data.data);
+  created+=counts.created;updated+=counts.updated;auto_mapped+=counts.auto_mapped;needs_review+=counts.needs_review;
+  next=data.paging?.next||null;pages++;
+ }
+ return {created,updated,auto_mapped,needs_review,pages,has_more:!!next};
+}
+
 // Phase 07 automatic content-to-existing-product matching.
 // Conservative deterministic identification; never creates products or overwrites admin mapping.
 function identifyProducts(post, products) {
