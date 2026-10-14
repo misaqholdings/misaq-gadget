@@ -53,6 +53,10 @@ async function phase07Intelligence(req,env,p,role,staff,actorId){
  await audit("product_knowledge",key,"approval_transition",{status:old.approval_status},{status:target}).run();
  return json({product_code:key,approval_status:target});
  }
+ if(kind==="comments"&&!key&&method==="GET"){
+ const rows=await env.DB.prepare("SELECT id,page_id,post_id,comment_id,comment_text,product_codes_json,resolution_status,public_reply_status,private_reply_status,delivery_status,created_at FROM facebook_comment_events ORDER BY id DESC LIMIT 100").all();
+ return json({comments:rows.results});
+ }
  if(kind==="contents"&&!key&&method==="GET"){
  const rows=await env.DB.prepare("SELECT c.id,c.page_id,c.facebook_content_id,c.content_type,c.content_name,c.post_message,c.permalink,c.source,c.sync_status,c.status,COALESCE(GROUP_CONCAT(m.product_code), '') AS product_codes FROM facebook_contents c LEFT JOIN facebook_content_products m ON m.content_id=c.id GROUP BY c.id ORDER BY c.id DESC LIMIT 100").all();
  return json({contents:rows.results});
