@@ -1,0 +1,68 @@
+name: Phase 06 Staging Code Checks
+on:
+  push:
+    branches: [dev/phase06-centralized-capi]
+  pull_request:
+    branches: [main]
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: JavaScript syntax
+        run: |
+          node --check js/order.js
+          node --check js/meta-attribution.js
+          node --check workers/staging-order-bridge.mjs
+          node --check workers/phase06-staging-meta-dispatcher.mjs
+          node --check workers/phase07-product-validation.mjs
+          node --check workers/phase07-catalog-api.mjs
+          node --check workers/phase07-ai-facebook-api.mjs
+          node --check workers/phase07-comment-webhook.mjs
+      - name: Attribution and event identity tests
+        run: node --test tests/meta-attribution.test.cjs tests/staging-order-bridge.test.cjs tests/phase06-meta-dispatcher.test.mjs
+      - name: Live staging bridge HTTP negative tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          URL='https://misaq-order-bridge-staging.misaqholdings.workers.dev/v1/website/orders'
+          code=$(curl --retry 2 --connect-timeout 10 --max-time 25 -sS -o /tmp/bridge-get -w '%{http_code}' "$URL")
+          echo "Unauthenticated GET status: $code"
+          test "$code" = 403
+          grep -q origin_not_allowed /tmp/bridge-get
+          code=$(curl --retry 2 --connect-timeout 10 --max-time 25 -sS -o /tmp/bridge-post -w '%{http_code}' -X POST -H 'Origin: https://gadget.misaqholdings.com' -H 'Content-Type: application/json' --data '{"product_code":"INVALID","order_id":"smoke_invalid_12345678","quantity":1,"customer_name":"Staging QA","phone":"01712345678","address":"Test address Dhaka"}' "$URL")
+          echo "Invalid POST status: $code"
+          test "$code" = 400
+          grep -q invalid_order /tmp/bridge-post
+          code=$(curl --retry 2 --connect-timeout 10 --max-time 25 -sS -o /tmp/bridge-turnstile -w '%{http_code}' -X POST -H 'Origin: https://gadget.misaqholdings.com' -H 'Content-Type: application/json' --data '{"product_code":"Q86","order_id":"smoke_turnstile_12345678","quantity":1,"customer_name":"Staging QA","phone":"01712345678","address":"Test address Dhaka","turnstile_token":"invalid-token"}' "$URL")
+          echo "Invalid Turnstile status: $code"
+          test "$code" = 403
+          grep -q verification_failed /tmp/bridge-turnstile
+          upstream='https://misaq-sales-bot-staging.misaqholdings.workers.dev/api/v1/orders'
+          code=$(curl --retry 2 --connect-timeout 10 --max-time 25 -sS -o /tmp/upstream-get -w '%{http_code}' "$upstream")
+          echo "Upstream unauthenticated GET status: $code"
+          test "$code" = 401
+
+      - name: Phase 07 staging authorization and UI smoke
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE='https://misaq-sales-bot-staging.misaqholdings.workers.dev'
+          for path in '/api/v1/catalog/products' '/api/v1/intelligence/contents' '/api/v1/intelligence/knowledge/STAGING_TEST_Q86' '/api/v1/intelligence/resolve?content_id=123456'; do
+            code=$(curl --retry 2 --connect-timeout 10 --max-time 25 -sS -o /tmp/p07api -w '%{http_code}' "$BASE$path")
+            echo "$path: $code"
+            test "$code" = 401
+          done
+          for path in '/product-admin' '/ai-knowledge-admin'; do
+            code=$(curl --retry 2 --connect-timeout 10 --max-time 25 -sS -o /tmp/p07ui -w '%{http_code}' "$BASE$path")
+            echo "$path: $code"
+            test "$code" = 200
+          done
+          code=$(curl --retry 2 --connect-timeout 10 --max-time 25 -sS -o /tmp/p07feed -w '%{http_code}' -X POST -H 'Content-Type: application/json' --data '{"object":"page","entry":[]}' "$BASE/api/v1/facebook/feed-webhook")
+          echo "Unauthenticated feed webhook status: $code"
+          test "$code" = 403
