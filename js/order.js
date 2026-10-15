@@ -37,7 +37,7 @@ const TURNSTILE_SITE_KEY = "0x4AAAAAAFXe1GGiKhYIy63x";
 const D1_Q86_ONLY = new URLSearchParams(window.location.search).get("d1_qa") === "1";
 let turnstileWidget = null;
 async function getTurnstileToken() {
-  if (TURNSTILE_SITE_KEY === "0x4AAAAAAFXe1GGiKhYIy63x") throw Error("Turnstile configuration pending");
+  if (!TURNSTILE_SITE_KEY) throw Error("Turnstile configuration pending");
   if (!window.turnstile) {
     await new Promise((resolve,reject) => {
       const script=document.createElement("script");
