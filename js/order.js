@@ -32,11 +32,11 @@
 const LEGACY_ORDER_ENDPOINT = "https://script.google.com/macros/s/AKfycbwmTbNg3Ed4X3dlRfry7zPiWBmYSJpTyQ3_M1V_95FZBEaO-Gsdt3cJEaoUwOPAdOEgWg/exec";
 const ORDER_ENDPOINT = "https://misaq-sales-bot.misaqholdings.workers.dev/api/v1/public/orders";
 // REQUIRED before merge: replace with public site key from Cloudflare Turnstile.
-const TURNSTILE_SITE_KEY = "CONFIGURE_TURNSTILE_SITE_KEY";
+const TURNSTILE_SITE_KEY = "0x4AAAAAAFXe1GGiKhYIy63x";
 const D1_Q86_ONLY = true;
 let turnstileWidget = null;
 async function getTurnstileToken() {
-  if (TURNSTILE_SITE_KEY === "CONFIGURE_TURNSTILE_SITE_KEY") throw Error("Turnstile configuration pending");
+  if (TURNSTILE_SITE_KEY === "0x4AAAAAAFXe1GGiKhYIy63x") throw Error("Turnstile configuration pending");
   if (!window.turnstile) {
     await new Promise((resolve,reject) => {
       const script=document.createElement("script");
