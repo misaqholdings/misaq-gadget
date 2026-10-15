@@ -33,8 +33,8 @@ const LEGACY_ORDER_ENDPOINT = "https://script.google.com/macros/s/AKfycbwmTbNg3E
 const ORDER_ENDPOINT = "https://misaq-sales-bot.misaqholdings.workers.dev/api/v1/public/orders";
 // REQUIRED before merge: replace with public site key from Cloudflare Turnstile.
 const TURNSTILE_SITE_KEY = "0x4AAAAAAFXe1GGiKhYIy63x";
-// Canary checkout: only ?d1_qa=1 uses D1 until QA is signed off.
-const D1_Q86_ONLY = new URLSearchParams(window.location.search).get("d1_qa") === "1";
+// Production Q86 orders use the verified Cloudflare D1 intake. Non-Q86 remains on legacy endpoint.
+const D1_Q86_ONLY = true;
 let turnstileWidget = null;
 async function getTurnstileToken() {
   if (!TURNSTILE_SITE_KEY) throw Error("Turnstile configuration pending");
