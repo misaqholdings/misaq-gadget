@@ -65,6 +65,11 @@ const PRODUCT_NAME =
   form.dataset.product ||
   "Unknown Product";
 
+// Render the Turnstile widget before checkout so the customer can complete verification.
+if (/Q86/i.test(PRODUCT_NAME)) {
+  window.addEventListener("load", () => { getTurnstileToken().catch(() => {}); }, {once:true});
+}
+
 const PRODUCT_PRICE =
   parseInt(
     form.dataset.price,
