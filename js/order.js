@@ -42,7 +42,8 @@ async function getTurnstileToken() {
     await new Promise((resolve,reject) => {
       const script=document.createElement("script");
       script.src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
-      script.onload=resolve;script.onerror=reject;document.head.append(script);
+      script.onload=() => window.turnstile ? resolve() : reject(new Error("turnstile_api_unavailable"));
+      script.onerror=() => reject(new Error("turnstile_script_blocked"));document.head.append(script);
     });
   }
   if (!turnstileWidget) {
@@ -68,7 +69,19 @@ const PRODUCT_NAME =
 
 // Render the Turnstile widget before checkout so the customer can complete verification.
 if (/Q86/i.test(PRODUCT_NAME)) {
-  window.addEventListener("load", () => { getTurnstileToken().catch(() => {}); }, {once:true});
+  window.addEventListener("load", () => {
+    getTurnstileToken().catch(err => {
+      const msg = String(err?.message || err);
+      if (msg !== "অনুগ্রহ করে নিরাপত্তা যাচাই সম্পন্ন করুন।") {
+        console.warn("Q86 verification cannot load:", msg);
+        const status = document.getElementById("formStatus");
+        if (status) {
+          status.dataset.state = "error";
+          status.textContent = "নিরাপত্তা যাচাই লোড হয়নি। VPN/Ad Blocker বন্ধ করে Refresh করুন; যাচাই ছাড়া অর্ডার পাঠানো হবে না।";
+        }
+      }
+    });
+  }, {once:true});
 }
 
 const PRODUCT_PRICE =
@@ -1366,7 +1379,7 @@ form.addEventListener(
 
 
       const reason = String(err?.message || "network_error");
-      const known = ["incomplete_prior_order_contact_support","bot_verification_failed","intake_disabled","rate_limited","invalid_details","order_lookup_failed","conflicting_order_state","Failed to fetch","Load failed"];
+      const known = ["turnstile_script_blocked","turnstile_api_unavailable","incomplete_prior_order_contact_support","bot_verification_failed","intake_disabled","rate_limited","invalid_details","order_lookup_failed","conflicting_order_state","Failed to fetch","Load failed"];
       const diagnostic = known.find(code => reason.includes(code)) || "network_or_server_error";
       console.error("MISAQ Q86 D1 Checkout:", diagnostic);
       if (D1_Q86_ONLY && /Q86/i.test(PRODUCT_NAME) && window.turnstile && turnstileWidget !== null) {
