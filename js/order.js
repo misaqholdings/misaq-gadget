@@ -1365,8 +1365,16 @@ form.addEventListener(
         "error";
 
 
-      formStatus.textContent =
-        "দুঃখিত, অর্ডার পাঠাতে সমস্যা হয়েছে। অনুগ্রহ করে সরাসরি কল করুন।";
+      const reason = String(err?.message || "network_error");
+      const known = ["incomplete_prior_order_contact_support","bot_verification_failed","intake_disabled","rate_limited","invalid_details","order_lookup_failed","conflicting_order_state","Failed to fetch","Load failed"];
+      const diagnostic = known.find(code => reason.includes(code)) || "network_or_server_error";
+      console.error("MISAQ Q86 D1 Checkout:", diagnostic);
+      if (D1_Q86_ONLY && /Q86/i.test(PRODUCT_NAME) && window.turnstile && turnstileWidget !== null) {
+        try { window.turnstile.reset(turnstileWidget); } catch (_) {}
+      }
+      formStatus.textContent = D1_Q86_ONLY && /Q86/i.test(PRODUCT_NAME)
+        ? "অর্ডার যাচাই করা যায়নি। Error: " + diagnostic + "। নতুন করে চেষ্টা করার আগে সাপোর্টে যোগাযোগ করুন।"
+        : "দুঃখিত, অর্ডার পাঠাতে সমস্যা হয়েছে। অনুগ্রহ করে সরাসরি কল করুন।";
 
     }
 
