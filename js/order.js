@@ -29,8 +29,30 @@
 // CONFIGURATION
 // ============================================================
 
-const ORDER_ENDPOINT =
-  "https://script.google.com/macros/s/AKfycbwmTbNg3Ed4X3dlRfry7zPiWBmYSJpTyQ3_M1V_95FZBEaO-Gsdt3cJEaoUwOPAdOEgWg/exec";
+const LEGACY_ORDER_ENDPOINT = "https://script.google.com/macros/s/AKfycbwmTbNg3Ed4X3dlRfry7zPiWBmYSJpTyQ3_M1V_95FZBEaO-Gsdt3cJEaoUwOPAdOEgWg/exec";
+const ORDER_ENDPOINT = "https://misaq-sales-bot.misaqholdings.workers.dev/api/v1/public/orders";
+// REQUIRED before merge: replace with public site key from Cloudflare Turnstile.
+const TURNSTILE_SITE_KEY = "0x4AAAAAAFXe1GGiKhYIy63x";
+// Canary checkout: only ?d1_qa=1 uses D1 until QA is signed off.
+const D1_Q86_ONLY = new URLSearchParams(window.location.search).get("d1_qa") === "1";
+let turnstileWidget = null;
+async function getTurnstileToken() {
+  if (TURNSTILE_SITE_KEY === "0x4AAAAAAFXe1GGiKhYIy63x") throw Error("Turnstile configuration pending");
+  if (!window.turnstile) {
+    await new Promise((resolve,reject) => {
+      const script=document.createElement("script");
+      script.src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
+      script.onload=resolve;script.onerror=reject;document.head.append(script);
+    });
+  }
+  if (!turnstileWidget) {
+    const div=document.createElement("div");div.id="misaq-turnstile";form.appendChild(div);
+    turnstileWidget=window.turnstile.render(div,{sitekey:TURNSTILE_SITE_KEY});
+  }
+  const token=window.turnstile.getResponse(turnstileWidget);
+  if (!token) throw Error("অনুগ্রহ করে নিরাপত্তা যাচাই সম্পন্ন করুন।");
+  return token;
+}
 
 
 // ============================================================
@@ -43,6 +65,11 @@ const form =
 const PRODUCT_NAME =
   form.dataset.product ||
   "Unknown Product";
+
+// Render the Turnstile widget before checkout so the customer can complete verification.
+if (/Q86/i.test(PRODUCT_NAME)) {
+  window.addEventListener("load", () => { getTurnstileToken().catch(() => {}); }, {once:true});
+}
 
 const PRODUCT_PRICE =
   parseInt(
@@ -1113,8 +1140,8 @@ form.addEventListener(
       delivery;
 
 
-    const eventId =
-      generateEventId();
+    const eventId = sessionStorage.getItem("misaq_pending_order_id") || generateEventId();
+    sessionStorage.setItem("misaq_pending_order_id", eventId);
 
 
     // --------------------------------------------------------
@@ -1240,30 +1267,29 @@ form.addEventListener(
       // We intentionally do not inspect res.ok.
       // ------------------------------------------------------
 
-      await fetch(
-        ORDER_ENDPOINT,
-        {
-
-          method:
-            "POST",
-
-          mode:
-            "no-cors",
-
-          headers: {
-
-            "Content-Type":
-              "text/plain;charset=utf-8"
-
-          },
-
-          body:
-            JSON.stringify(
-              payload
-            )
-
+      if (D1_Q86_ONLY && /Q86/i.test(PRODUCT_NAME)) {
+        payload.turnstileToken = await getTurnstileToken();
+        const response = await fetch(ORDER_ENDPOINT, {
+          method: "POST",
+          mode: "cors",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify(payload)
+        });
+        const result = await response.json();
+        if (!response.ok || result.ok !== true || result.order_id !== eventId) {
+          throw Error(result.error || "Order not accepted by D1");
         }
-      );
+        window.turnstile.reset(turnstileWidget);
+        sessionStorage.removeItem("misaq_pending_order_id");
+      } else {
+        // Transitional legacy route for non-Q86 products until catalog migration.
+        await fetch(LEGACY_ORDER_ENDPOINT, {
+          method: "POST",
+          mode: "no-cors",
+          headers: {"Content-Type": "text/plain;charset=utf-8"},
+          body: JSON.stringify(payload)
+        });
+      }
 
 
       // ======================================================
