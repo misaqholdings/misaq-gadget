@@ -29,12 +29,9 @@
 // CONFIGURATION
 // ============================================================
 
-const LEGACY_ORDER_ENDPOINT = "https://script.google.com/macros/s/AKfycbwmTbNg3Ed4X3dlRfry7zPiWBmYSJpTyQ3_M1V_95FZBEaO-Gsdt3cJEaoUwOPAdOEgWg/exec";
 const ORDER_ENDPOINT = "https://misaq-sales-bot.misaqholdings.workers.dev/api/v1/public/orders";
 // REQUIRED before merge: replace with public site key from Cloudflare Turnstile.
 const TURNSTILE_SITE_KEY = "0x4AAAAAAFXe1GGiKhYIy63x";
-// Production Q86 orders use the verified Cloudflare D1 intake. Non-Q86 remains on legacy endpoint.
-const D1_Q86_ONLY = false;
 let turnstileWidget = null;
 async function getTurnstileToken() {
   if (!TURNSTILE_SITE_KEY) throw Error("Turnstile configuration pending");
@@ -68,12 +65,12 @@ const PRODUCT_NAME =
   "Unknown Product";
 
 // Render the Turnstile widget before checkout so the customer can complete verification.
-if (true) {
-  window.addEventListener("load", () => {
+{
+  const initializeTurnstile = () => {
     getTurnstileToken().catch(err => {
       const msg = String(err?.message || err);
       if (msg !== "অনুগ্রহ করে নিরাপত্তা যাচাই সম্পন্ন করুন।") {
-        console.warn("Q86 verification cannot load:", msg);
+        console.warn("Checkout verification cannot load:", msg);
         const status = document.getElementById("formStatus");
         if (status) {
           status.dataset.state = "error";
@@ -81,7 +78,9 @@ if (true) {
         }
       }
     });
-  }, {once:true});
+  };
+  if (document.readyState === "complete") initializeTurnstile();
+  else window.addEventListener("load", initializeTurnstile, {once:true});
 }
 
 const PRODUCT_CODE = String(form.dataset.productCode || '').trim().toUpperCase();
@@ -1377,7 +1376,7 @@ form.addEventListener(
       const reason = String(err?.message || "network_error");
       const known = ["turnstile_script_blocked","turnstile_api_unavailable","incomplete_prior_order_contact_support","bot_verification_failed","intake_disabled","rate_limited","invalid_details","order_lookup_failed","conflicting_order_state","Failed to fetch","Load failed"];
       const diagnostic = known.find(code => reason.includes(code)) || "network_or_server_error";
-      console.error("MISAQ Q86 D1 Checkout:", diagnostic);
+      console.error("MISAQ Catalog D1 Checkout:", diagnostic);
       if (PRODUCT_CODE && window.turnstile && turnstileWidget !== null) {
         try { window.turnstile.reset(turnstileWidget); } catch (_) {}
       }
