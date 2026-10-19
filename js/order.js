@@ -34,7 +34,7 @@ const ORDER_ENDPOINT = "https://misaq-sales-bot.misaqholdings.workers.dev/api/v1
 // REQUIRED before merge: replace with public site key from Cloudflare Turnstile.
 const TURNSTILE_SITE_KEY = "0x4AAAAAAFXe1GGiKhYIy63x";
 // Production Q86 orders use the verified Cloudflare D1 intake. Non-Q86 remains on legacy endpoint.
-const D1_Q86_ONLY = true;
+const D1_Q86_ONLY = false;
 let turnstileWidget = null;
 async function getTurnstileToken() {
   if (!TURNSTILE_SITE_KEY) throw Error("Turnstile configuration pending");
@@ -68,7 +68,7 @@ const PRODUCT_NAME =
   "Unknown Product";
 
 // Render the Turnstile widget before checkout so the customer can complete verification.
-if (/Q86/i.test(PRODUCT_NAME)) {
+if (true) {
   window.addEventListener("load", () => {
     getTurnstileToken().catch(err => {
       const msg = String(err?.message || err);
@@ -83,6 +83,8 @@ if (/Q86/i.test(PRODUCT_NAME)) {
     });
   }, {once:true});
 }
+
+const PRODUCT_CODE = String(form.dataset.productCode || '').trim().toUpperCase();
 
 const PRODUCT_PRICE =
   parseInt(
@@ -1153,8 +1155,9 @@ form.addEventListener(
       delivery;
 
 
-    const eventId = sessionStorage.getItem("misaq_pending_order_id") || generateEventId();
-    sessionStorage.setItem("misaq_pending_order_id", eventId);
+    const pendingKey = "misaq_pending_order_id_" + PRODUCT_CODE;
+    const eventId = sessionStorage.getItem(pendingKey) || generateEventId();
+    sessionStorage.setItem(pendingKey, eventId);
 
 
     // --------------------------------------------------------
@@ -1165,6 +1168,7 @@ form.addEventListener(
 
       product:
         PRODUCT_NAME,
+      productCode: PRODUCT_CODE,
 
       name:
         document
@@ -1280,7 +1284,7 @@ form.addEventListener(
       // We intentionally do not inspect res.ok.
       // ------------------------------------------------------
 
-      if (D1_Q86_ONLY && /Q86/i.test(PRODUCT_NAME)) {
+      if (PRODUCT_CODE) {
         payload.turnstileToken = await getTurnstileToken();
         const response = await fetch(ORDER_ENDPOINT, {
           method: "POST",
@@ -1293,16 +1297,8 @@ form.addEventListener(
           throw Error(result.error || "Order not accepted by D1");
         }
         window.turnstile.reset(turnstileWidget);
-        sessionStorage.removeItem("misaq_pending_order_id");
-      } else {
-        // Transitional legacy route for non-Q86 products until catalog migration.
-        await fetch(LEGACY_ORDER_ENDPOINT, {
-          method: "POST",
-          mode: "no-cors",
-          headers: {"Content-Type": "text/plain;charset=utf-8"},
-          body: JSON.stringify(payload)
-        });
-      }
+        sessionStorage.removeItem(pendingKey);
+      } else { throw Error('product_code_missing'); }
 
 
       // ======================================================
@@ -1382,10 +1378,10 @@ form.addEventListener(
       const known = ["turnstile_script_blocked","turnstile_api_unavailable","incomplete_prior_order_contact_support","bot_verification_failed","intake_disabled","rate_limited","invalid_details","order_lookup_failed","conflicting_order_state","Failed to fetch","Load failed"];
       const diagnostic = known.find(code => reason.includes(code)) || "network_or_server_error";
       console.error("MISAQ Q86 D1 Checkout:", diagnostic);
-      if (D1_Q86_ONLY && /Q86/i.test(PRODUCT_NAME) && window.turnstile && turnstileWidget !== null) {
+      if (PRODUCT_CODE && window.turnstile && turnstileWidget !== null) {
         try { window.turnstile.reset(turnstileWidget); } catch (_) {}
       }
-      formStatus.textContent = D1_Q86_ONLY && /Q86/i.test(PRODUCT_NAME)
+      formStatus.textContent = PRODUCT_CODE
         ? "অর্ডার যাচাই করা যায়নি। Error: " + diagnostic + "। নতুন করে চেষ্টা করার আগে সাপোর্টে যোগাযোগ করুন।"
         : "দুঃখিত, অর্ডার পাঠাতে সমস্যা হয়েছে। অনুগ্রহ করে সরাসরি কল করুন।";
 
