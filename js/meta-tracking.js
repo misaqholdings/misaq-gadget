@@ -14,7 +14,13 @@
   };
   const segment = (location.pathname.split('/').filter(Boolean)[0] || '').toLowerCase();
   const form = document.getElementById('orderForm');
-  const productCode = productCodes[segment] || null;
+  // Future product pages can supply data-product-code on their form.
+  // Otherwise derive a stable code from the first product URL segment.
+  const productCode = form
+    ? (String(form.dataset.productCode || '').trim() ||
+       productCodes[segment] ||
+       (segment && segment !== 'index.html' ? segment.toUpperCase().replace(/[^A-Z0-9_-]/g, '_') : null))
+    : null;
 
   if (!window.fbq) {
     !function(f,b,e,v,n,t,s) {
