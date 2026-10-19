@@ -163,7 +163,7 @@
       <h2 class="section-title">অর্ডার কনফার্ম করুন</h2>
       <p class="section-sub">ফর্মটি পূরণ করুন, আমাদের টিম কনফার্মেশনের জন্য কল করবে।</p>
 
-      <form class="order-form" id="orderForm" data-product="Q10 HiFi Stereo Sports Earbuds" data-price="950">
+      <form class="order-form" id="orderForm" data-product-code="Q10" data-product="Q10 HiFi Stereo Sports Earbuds" data-price="950">
         <div class="field">
           <label for="name">পূর্ণ নাম</label>
           <input type="text" id="name" name="name" required />
@@ -208,6 +208,7 @@
           <div class="order-summary-row total"><span>সর্বমোট</span><span id="sumTotal">৳950 + ডেলিভারি</span></div>
         </div>
 
+        <div class="field"><label for="marketingConsent"><input type="checkbox" id="marketingConsent" name="marketing_consent" value="yes" /> আমি বুঝেছি যে আমার সম্মতি থাকলে MISAQ Gadget বিজ্ঞাপনের কার্যকারিতা পরিমাপের জন্য Meta-এর সঙ্গে সীমিত তথ্য শেয়ার করতে পারে। সম্মতি না দিলেও অর্ডার করা যাবে। <a href="../privacy-policy.html" target="_blank" rel="noopener">Privacy Policy</a></label></div>
         <button type="submit" class="btn-cta">অর্ডার কনফার্ম করুন</button>
         <p class="form-status" id="formStatus" role="status" aria-live="polite"></p>
       </form>

@@ -1166,6 +1166,12 @@ form.addEventListener(
       product:
         PRODUCT_NAME,
 
+      productCode:
+        form.dataset.productCode || "",
+
+      marketing_consent:
+        Boolean(form.elements.namedItem("marketing_consent")?.checked),
+
       name:
         document
           .getElementById(
