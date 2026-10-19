@@ -11,30 +11,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&family=Poppins:wght@600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="../css/style.css" />
 
-<!-- Meta Pixel Code -->
-<script>
-!function(f,b,e,v,n,t,s)
-{if(f.fbq)return;n=f.fbq=function(){n.callMethod?
-n.callMethod.apply(n,arguments):n.queue.push(arguments)};
-if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
-n.queue=[];t=b.createElement(e);t.async=!0;
-t.src=v;s=b.getElementsByTagName(e)[0];
-s.parentNode.insertBefore(t,s)}(window, document,'script',
-'https://connect.facebook.net/en_US/fbevents.js');
-fbq('init', '2296738321065012');
-fbq('track', 'PageView');
-fbq('track', 'ViewContent', {
-  content_ids: ['Q86'],
-  content_type: 'product',
-  content_name: 'Q86 Retro Camera Design TWS Bluetooth Earbuds',
-  value: 650,
-  currency: 'BDT'
-});
-</script>
-<noscript><img height="1" width="1" style="display:none"
-src="https://www.facebook.com/tr?id=2296738321065012&ev=PageView&noscript=1"
-/></noscript>
-<!-- End Meta Pixel Code -->
+<script src="/js/meta-tracking.js" defer></script>
 </head>
 <body>
 
@@ -284,30 +261,6 @@ src="https://www.facebook.com/tr?id=2296738321065012&ev=PageView&noscript=1"
   <a href="#order-form" class="btn-cta">অর্ডার করুন</a>
 </div>
 
-<script>
-// Retargeting: fire only when a visitor starts interacting with the order form.
-// No Lead or Purchase event is fired here; those require staff verification/delivery.
-(function () {
-  const form = document.getElementById('orderForm');
-  if (!form) return;
-  let checkoutStarted = false;
-  function trackCheckoutStart(event) {
-    if (checkoutStarted || !event.target.closest('input, select, textarea, .color-option, .qty-control')) return;
-    checkoutStarted = true;
-    if (typeof window.fbq === 'function') {
-      window.fbq('track', 'InitiateCheckout', {
-        content_ids: ['Q86'],
-        content_type: 'product',
-        num_items: 1,
-        value: 650,
-        currency: 'BDT'
-      });
-    }
-  }
-  form.addEventListener('focusin', trackCheckoutStart, { passive: true });
-  form.addEventListener('click', trackCheckoutStart, { passive: true });
-})();
-</script>
 <script src="../js/order.js"></script>
 </body>
 </html>
