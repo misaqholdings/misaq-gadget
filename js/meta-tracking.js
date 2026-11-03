@@ -32,6 +32,8 @@
       s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s);
     }(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');
   }
+  // Disable Meta's automatic configuration (auto-detected events) so only our explicit events fire.
+  window.fbq('set', 'autoConfig', false, PIXEL_ID);
   window.fbq('init', PIXEL_ID);
   window.fbq('track', 'PageView');
 
