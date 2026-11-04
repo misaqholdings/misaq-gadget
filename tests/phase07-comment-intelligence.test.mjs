@@ -1,0 +1,12 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import {decideCommentReply} from "../workers/phase07-comment-intelligence.mjs";
+const event={comment_id:"c1",post_id:"p1",comment_text:"দাম কত?"};
+const knowledge={product_code:"Q86",approval_status:"published",sale_price:650,currency:"BDT",payment_methods:"Cash on Delivery (COD)",delivery_policy:"Inside Dhaka BDT 70",warranty_policy:"1 Year Warranty"};
+test("published Q86 price drafts, never auto-sends",()=>{const r=decideCommentReply({event,mappedProductCodes:["Q86"],publishedKnowledge:knowledge});assert.equal(r.action,"draft_reply");assert.equal(r.requires_human_approval,true);assert.match(r.text,/৳650/);});
+test("unpublished knowledge fails closed",()=>assert.equal(decideCommentReply({event,mappedProductCodes:["Q86"],publishedKnowledge:{...knowledge,approval_status:"draft"}}).action,"human_review"));
+test("multiple products require clarification",()=>assert.equal(decideCommentReply({event,mappedProductCodes:["Q86","Q10"],publishedKnowledge:knowledge}).action,"clarify"));
+test("unmapped posts require human review",()=>assert.equal(decideCommentReply({event,mappedProductCodes:[],publishedKnowledge:knowledge}).action,"human_review"));
+test("complaint escalates",()=>assert.equal(decideCommentReply({event:{...event,comment_text:"প্রোডাক্ট নষ্ট"},mappedProductCodes:["Q86"],publishedKnowledge:knowledge}).reason,"case_specific"));
+test("delivery query escalates instead of inventing terms",()=>assert.equal(decideCommentReply({event:{...event,comment_text:"delivery charge?"},mappedProductCodes:["Q86"],publishedKnowledge:knowledge}).reason,"delivery_needs_context"));
+test("page's own comments ignored",()=>assert.equal(decideCommentReply({event:{...event,is_page_author:true},mappedProductCodes:["Q86"],publishedKnowledge:knowledge}).action,"ignore"));

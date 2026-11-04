@@ -1,0 +1,46 @@
+name: Phase 07 Comment Review Verification
+on:
+  push:
+    branches: [dev/phase06-centralized-capi]
+    paths:
+      - 'workers/phase07-comment-*.mjs'
+      - 'tests/phase07-comment-*.mjs'
+      - '.github/workflows/phase07-comment-review-verification.yml'
+  workflow_dispatch:
+jobs:
+  unit-and-security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Syntax check
+        run: |
+          node --check workers/phase07-comment-review-api.mjs
+          node --check workers/phase07-comment-intelligence.mjs
+          node --check workers/phase07-comment-webhook.mjs
+      - name: Comment intelligence and review tests
+        run: node --test tests/phase07-comment-intelligence.test.mjs tests/phase07-comment-review.test.mjs
+  staging-http-security:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Unauthenticated endpoint and dashboard smoke
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE='https://misaq-sales-bot-staging.misaqholdings.workers.dev'
+          for path in '/api/v1/intelligence/comments/review?id=1' '/api/v1/intelligence/comments/review?id=invalid' '/api/v1/intelligence/comments' '/api/v1/catalog/products' '/api/v1/intelligence/knowledge/STAGING_TEST_Q86'; do
+            code=$(curl --retry 2 --connect-timeout 10 --max-time 25 -sS -o /tmp/misaq-response -w '%{http_code}' "$BASE$path")
+            echo "$path HTTP $code"
+            test "$code" = 401
+          done
+          code=$(curl --retry 2 --connect-timeout 10 --max-time 25 -sS -o /tmp/misaq-post -w '%{http_code}' -X POST "$BASE/api/v1/intelligence/comments/review?id=1")
+          test "$code" = 401
+          code=$(curl --retry 2 --connect-timeout 10 --max-time 25 -sS -o /tmp/misaq-webhook -w '%{http_code}' -X POST -H 'Content-Type: application/json' --data '{"object":"page","entry":[]}' "$BASE/api/v1/facebook/feed-webhook")
+          test "$code" = 403
+          code=$(curl --retry 2 --connect-timeout 10 --max-time 25 -sS -o /tmp/misaq-product -w '%{http_code}' "$BASE/product-admin")
+          test "$code" = 200
+          code=$(curl --retry 2 --connect-timeout 10 --max-time 25 -sS -o /tmp/misaq-knowledge -w '%{http_code}' "$BASE/ai-knowledge-admin")
+          test "$code" = 200
+          echo 'Phase07 staging HTTP security PASS'
