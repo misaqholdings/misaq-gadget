@@ -173,9 +173,9 @@
         <div class="field">
           <label>কালার</label>
           <div class="color-select">
-            <div class="color-option" data-color="কালো">কালো</div>
+            <div class="color-option is-selected" data-color="কালো">কালো</div>
           </div>
-          <input type="hidden" id="color" name="color" value="" />
+          <input type="hidden" id="color" name="color" value="কালো" />
         </div>
         <div class="field">
           <label>পরিমাণ</label>
@@ -234,12 +234,5 @@
 </div>
 
 <script src="../js/order.js"></script>
-<script>
-  // একটাই কালার থাকায় অর্ডার ফর্মে অটো-সিলেক্ট (order.js-এর ক্লিক হ্যান্ডলার ব্যবহার করে)
-  document.addEventListener('DOMContentLoaded', function () {
-    var only = document.querySelector('.color-option[data-color]');
-    if (only && !only.classList.contains('selected')) only.click();
-  });
-</script>
 </body>
 </html>
