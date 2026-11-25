@@ -138,6 +138,55 @@ const HAS_COLOR =
 
 
 // ============================================================
+// FORM VALIDATION HELPERS
+// ============================================================
+
+const phoneInput =
+  document.getElementById("phone");
+
+const nameInput =
+  document.getElementById("name");
+
+const addressInput =
+  document.getElementById("address");
+
+const BN_DIGITS = "০১২৩৪৫৬৭৮৯";
+
+// Bengali digits -> English digits; remove spaces, dashes, brackets
+function normalizePhone(value) {
+
+  return String(value || "")
+    .replace(/[০-৯]/g, (d) => String(BN_DIGITS.indexOf(d)))
+    .replace(/[\s\-().]/g, "");
+
+}
+
+// Bangladesh mobile: exactly 11 digits, starts with 0 (01[3-9]XXXXXXXX)
+function isValidBDMobile(value) {
+
+  return /^01[3-9]\d{8}$/.test(value);
+
+}
+
+const PHONE_ERROR =
+  "মোবাইল নম্বরটি সঠিক নয়। ০ দিয়ে শুরু হওয়া ১১ ডিজিটের নম্বর দিন (যেমন 01XXXXXXXXX)।";
+
+function showFormError(message) {
+
+  formStatus.dataset.state = "error";
+  formStatus.textContent = message;
+
+}
+
+function clearFormError() {
+
+  formStatus.dataset.state = "";
+  formStatus.textContent = "";
+
+}
+
+
+// ============================================================
 // EVENT ID
 // ============================================================
 //
@@ -1061,8 +1110,83 @@ if (
 }
 
 
-// Initial summary
-updateSummary();
+// Keep hidden fields in step with what is actually selected on screen.
+// (Browsers can restore stale hidden-field values on reload / back.)
+function syncSelections() {
+
+  const zone =
+    document.querySelector(
+      '.field .color-select .color-option[data-charge].is-selected'
+    );
+
+  deliveryZoneInput.value =
+    zone
+      ? zone.dataset.charge
+      : "";
+
+  if (
+    HAS_COLOR
+  ) {
+
+    const chosen =
+      document.querySelector(
+        '.field .color-select .color-option[data-color].is-selected'
+      );
+
+    colorInput.value =
+      chosen
+        ? chosen.dataset.color
+        : "";
+
+  }
+
+  updateSummary();
+
+}
+
+syncSelections();
+
+window.addEventListener(
+  "pageshow",
+  syncSelections
+);
+
+
+// Tell the customer straight away if the mobile number is wrong
+phoneInput.addEventListener(
+  "blur",
+  () => {
+
+    if (
+      phoneInput.value.trim() === ""
+    ) {
+      return;
+    }
+
+    if (
+      !isValidBDMobile(
+        normalizePhone(
+          phoneInput.value
+        )
+      )
+    ) {
+
+      showFormError(
+        PHONE_ERROR
+      );
+
+    }
+
+    else if (
+      formStatus.textContent === PHONE_ERROR
+    ) {
+
+      clearFormError();
+
+    }
+
+  }
+);
 
 
 // ============================================================
@@ -1079,6 +1203,49 @@ form.addEventListener(
     // --------------------------------------------------------
     // Validate delivery / color selection
     // --------------------------------------------------------
+
+    // Always read selections from what is actually selected on screen
+    syncSelections();
+
+
+    // --------------------------------------------------------
+    // Validate customer details
+    // --------------------------------------------------------
+
+    const cleanPhone =
+      normalizePhone(
+        phoneInput.value
+      );
+
+    if (
+      !isValidBDMobile(
+        cleanPhone
+      )
+    ) {
+
+      showFormError(
+        PHONE_ERROR
+      );
+
+      phoneInput.focus();
+
+      return;
+
+    }
+
+    if (
+      !nameInput.value.trim() ||
+      !addressInput.value.trim()
+    ) {
+
+      showFormError(
+        "অনুগ্রহ করে নাম ও ঠিকানা লিখুন।"
+      );
+
+      return;
+
+    }
+
 
     const deliveryMissing =
       deliveryZoneInput.value === "";
@@ -1170,25 +1337,13 @@ form.addEventListener(
       productCode: PRODUCT_CODE,
 
       name:
-        document
-          .getElementById(
-            "name"
-          )
-          .value,
+        nameInput.value.trim(),
 
       phone:
-        document
-          .getElementById(
-            "phone"
-          )
-          .value,
+        cleanPhone,
 
       address:
-        document
-          .getElementById(
-            "address"
-          )
-          .value,
+        addressInput.value.trim(),
 
       deliveryZone:
         delivery === 70
@@ -1380,9 +1535,13 @@ form.addEventListener(
       if (PRODUCT_CODE && window.turnstile && turnstileWidget !== null) {
         try { window.turnstile.reset(turnstileWidget); } catch (_) {}
       }
-      formStatus.textContent = PRODUCT_CODE
-        ? "অর্ডার যাচাই করা যায়নি। Error: " + diagnostic + "। নতুন করে চেষ্টা করার আগে সাপোর্টে যোগাযোগ করুন।"
-        : "দুঃখিত, অর্ডার পাঠাতে সমস্যা হয়েছে। অনুগ্রহ করে সরাসরি কল করুন।";
+      if (diagnostic === "invalid_details") {
+        formStatus.textContent = "দেওয়া তথ্যে সমস্যা আছে। নাম, মোবাইল নম্বর (০ দিয়ে শুরু ১১ ডিজিট) ও ঠিকানা সঠিকভাবে লিখে আবার চেষ্টা করুন।";
+      } else {
+        formStatus.textContent = PRODUCT_CODE
+          ? "অর্ডার যাচাই করা যায়নি। Error: " + diagnostic + "। নতুন করে চেষ্টা করার আগে সাপোর্টে যোগাযোগ করুন।"
+          : "দুঃখিত, অর্ডার পাঠাতে সমস্যা হয়েছে। অনুগ্রহ করে সরাসরি কল করুন।";
+      }
 
     }
 
