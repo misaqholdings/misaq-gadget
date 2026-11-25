@@ -1310,6 +1310,35 @@ phoneInput.addEventListener(
 );
 
 
+// Clear a previous error line as soon as the customer changes something,
+// so an old message never stays on screen after the details are corrected.
+form.addEventListener(
+  "input",
+  () => {
+
+    if (formStatus.dataset.state === "error") {
+      clearFormError();
+    }
+
+  }
+);
+
+form.addEventListener(
+  "click",
+  (ev) => {
+
+    if (
+      formStatus.dataset.state === "error" &&
+      ev.target.closest &&
+      ev.target.closest(".color-option, .qty-control")
+    ) {
+      clearFormError();
+    }
+
+  }
+);
+
+
 // ============================================================
 // ORDER SUBMISSION
 // ============================================================
@@ -1678,6 +1707,9 @@ form.addEventListener(
       const known = ["turnstile_script_blocked","turnstile_api_unavailable","incomplete_prior_order_contact_support","bot_verification_failed","intake_disabled","rate_limited","invalid_details","order_lookup_failed","conflicting_order_state","Failed to fetch","Load failed"];
       const diagnostic = known.find(code => reason.includes(code)) || "network_or_server_error";
       console.error("MISAQ Catalog D1 Checkout:", diagnostic);
+      if (diagnostic === "invalid_details") {
+        try { sessionStorage.removeItem(pendingKey); } catch (_) {}
+      }
       if (PRODUCT_CODE && window.turnstile && turnstileWidget !== null) {
         try { window.turnstile.reset(turnstileWidget); } catch (_) {}
       }
