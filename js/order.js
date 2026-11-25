@@ -171,10 +171,115 @@ function isValidBDMobile(value) {
 const PHONE_ERROR =
   "মোবাইল নম্বরটি সঠিক নয়। ০ দিয়ে শুরু হওয়া ১১ ডিজিটের নম্বর দিন (যেমন 01XXXXXXXXX)।";
 
-function showFormError(message) {
+// ============================================================
+// POP-UP MESSAGE (visible on mobile, unlike text under the button)
+// ============================================================
+
+let misaqPopup = null;
+
+function ensurePopupStyles() {
+
+  if (document.getElementById("misaq-popup-style")) {
+    return;
+  }
+
+  const style = document.createElement("style");
+
+  style.id = "misaq-popup-style";
+
+  style.textContent = `
+    .misaq-popup-overlay{position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px;background:rgba(15,18,24,.55);}
+    .misaq-popup{width:100%;max-width:380px;background:#fff;border-radius:16px;padding:24px 20px 20px;text-align:center;box-shadow:0 20px 50px rgba(0,0,0,.3);}
+    .misaq-popup-icon{width:48px;height:48px;border-radius:50%;background:#fdecec;color:var(--red,#c8102e);display:flex;align-items:center;justify-content:center;margin:0 auto 12px;font-size:26px;font-weight:700;line-height:1;}
+    .misaq-popup .misaq-popup-msg{margin:0 0 18px;font-size:16px;line-height:1.6;color:var(--ink,#1c1f26);text-align:center;}
+    .misaq-popup-btn{width:100%;border:0;border-radius:12px;padding:13px;font:inherit;font-weight:700;font-size:16px;color:#fff;background:var(--red,#c8102e);cursor:pointer;}
+    .misaq-field-error{margin:6px 0 0;font-size:13.5px;line-height:1.5;color:var(--red,#c8102e);text-align:left;}
+  `;
+
+  document.head.appendChild(style);
+
+}
+
+function showPopup(message, onClose) {
+
+  ensurePopupStyles();
+
+  if (misaqPopup) {
+    misaqPopup.remove();
+    misaqPopup = null;
+  }
+
+  const overlay = document.createElement("div");
+
+  overlay.className = "misaq-popup-overlay";
+  overlay.setAttribute("role", "alertdialog");
+  overlay.setAttribute("aria-modal", "true");
+
+  overlay.innerHTML =
+    '<div class="misaq-popup">' +
+    '<div class="misaq-popup-icon">!</div>' +
+    '<p class="misaq-popup-msg"></p>' +
+    '<button type="button" class="misaq-popup-btn">ঠিক আছে</button>' +
+    '</div>';
+
+  overlay.querySelector(".misaq-popup-msg").textContent = message;
+
+  const closeBtn = overlay.querySelector(".misaq-popup-btn");
+
+  const onKey = (ev) => {
+    if (ev.key === "Escape") close();
+  };
+
+  function close() {
+
+    overlay.remove();
+    misaqPopup = null;
+    document.removeEventListener("keydown", onKey);
+
+    if (typeof onClose === "function") {
+      onClose();
+    }
+
+  }
+
+  closeBtn.addEventListener("click", close);
+
+  overlay.addEventListener("click", (ev) => {
+    if (ev.target === overlay) close();
+  });
+
+  document.addEventListener("keydown", onKey);
+
+  document.body.appendChild(overlay);
+
+  misaqPopup = overlay;
+
+  closeBtn.focus();
+
+}
+
+// Shows the message as a pop-up (and also in the form status line).
+// `target` = field to scroll to / focus after the customer closes the pop-up.
+function showFormError(message, target) {
 
   formStatus.dataset.state = "error";
   formStatus.textContent = message;
+
+  showPopup(message, () => {
+
+    if (!target) {
+      return;
+    }
+
+    if (target.scrollIntoView) {
+      target.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+
+    if (target.matches && target.matches("input, textarea, select")) {
+      target.focus({ preventScroll: true });
+    }
+
+  });
 
 }
 
@@ -1152,37 +1257,53 @@ window.addEventListener(
 );
 
 
-// Tell the customer straight away if the mobile number is wrong
+// Show the mobile-number hint right under the field (visible on mobile)
+function setPhoneHint(message) {
+
+  ensurePopupStyles();
+
+  let hint = document.getElementById("misaq-phone-hint");
+
+  if (!hint) {
+
+    hint = document.createElement("p");
+    hint.id = "misaq-phone-hint";
+    hint.className = "misaq-field-error";
+    hint.setAttribute("role", "alert");
+
+    phoneInput.insertAdjacentElement("afterend", hint);
+
+  }
+
+  hint.textContent = message || "";
+  hint.style.display = message ? "block" : "none";
+
+}
+
 phoneInput.addEventListener(
   "blur",
   () => {
 
-    if (
-      phoneInput.value.trim() === ""
-    ) {
+    if (phoneInput.value.trim() === "") {
+      setPhoneHint("");
       return;
     }
 
-    if (
-      !isValidBDMobile(
-        normalizePhone(
-          phoneInput.value
-        )
-      )
-    ) {
+    setPhoneHint(
+      isValidBDMobile(normalizePhone(phoneInput.value))
+        ? ""
+        : PHONE_ERROR
+    );
 
-      showFormError(
-        PHONE_ERROR
-      );
+  }
+);
 
-    }
+phoneInput.addEventListener(
+  "input",
+  () => {
 
-    else if (
-      formStatus.textContent === PHONE_ERROR
-    ) {
-
-      clearFormError();
-
+    if (isValidBDMobile(normalizePhone(phoneInput.value))) {
+      setPhoneHint("");
     }
 
   }
@@ -1223,11 +1344,12 @@ form.addEventListener(
       )
     ) {
 
-      showFormError(
-        PHONE_ERROR
-      );
+      setPhoneHint(PHONE_ERROR);
 
-      phoneInput.focus();
+      showFormError(
+        PHONE_ERROR,
+        phoneInput
+      );
 
       return;
 
@@ -1239,7 +1361,8 @@ form.addEventListener(
     ) {
 
       showFormError(
-        "অনুগ্রহ করে নাম ও ঠিকানা লিখুন।"
+        "অনুগ্রহ করে নাম ও ঠিকানা লিখুন।",
+        !nameInput.value.trim() ? nameInput : addressInput
       );
 
       return;
@@ -1261,14 +1384,26 @@ form.addEventListener(
       colorMissing
     ) {
 
-      formStatus.dataset.state =
-        "error";
+      const deliveryField =
+        document.querySelector(
+          '.color-option[data-charge]'
+        )?.closest(".field");
 
-
-      formStatus.textContent =
+      const colorField =
         HAS_COLOR
+          ? colorInput.closest(".field")
+          : null;
+
+      showFormError(
+        deliveryMissing && colorMissing
           ? "অনুগ্রহ করে ডেলিভারি ফি এবং কালার বেছে নিন।"
-          : "অনুগ্রহ করে ডেলিভারি ফি বেছে নিন।";
+          : deliveryMissing
+            ? "অনুগ্রহ করে ডেলিভারি ফি বেছে নিন।"
+            : "অনুগ্রহ করে কালার বেছে নিন।",
+        deliveryMissing
+          ? deliveryField
+          : colorField
+      );
 
 
       return;
@@ -1529,6 +1664,17 @@ form.addEventListener(
 
 
       const reason = String(err?.message || "network_error");
+
+      if (reason === "অনুগ্রহ করে নিরাপত্তা যাচাই সম্পন্ন করুন।") {
+
+        showFormError(
+          "অনুগ্রহ করে নিরাপত্তা যাচাই (Verify) সম্পন্ন করুন, তারপর আবার অর্ডার কনফার্ম করুন।",
+          document.getElementById("misaq-turnstile")
+        );
+
+        return;
+
+      }
       const known = ["turnstile_script_blocked","turnstile_api_unavailable","incomplete_prior_order_contact_support","bot_verification_failed","intake_disabled","rate_limited","invalid_details","order_lookup_failed","conflicting_order_state","Failed to fetch","Load failed"];
       const diagnostic = known.find(code => reason.includes(code)) || "network_or_server_error";
       console.error("MISAQ Catalog D1 Checkout:", diagnostic);
@@ -1542,6 +1688,8 @@ form.addEventListener(
           ? "অর্ডার যাচাই করা যায়নি। Error: " + diagnostic + "। নতুন করে চেষ্টা করার আগে সাপোর্টে যোগাযোগ করুন।"
           : "দুঃখিত, অর্ডার পাঠাতে সমস্যা হয়েছে। অনুগ্রহ করে সরাসরি কল করুন।";
       }
+
+      showPopup(formStatus.textContent);
 
     }
 
